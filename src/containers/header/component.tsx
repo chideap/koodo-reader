@@ -50,6 +50,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       isDeveloperVer: false,
       isHidePro: false,
       isSync: false,
+      isAutoSync: ConfigService.getReaderConfig("isDisableAutoSync") !== "yes",
     };
   }
   async componentDidMount() {
@@ -113,6 +114,21 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       this.props.handleFetchNotes();
       this.props.handleFetchBookmarks();
     });
+    this.props.handleCloudSyncFunc(this.handleCloudSync);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        if (ConfigService.getItem("isFinshReading") === "yes") {
+          ConfigService.setItem("isFinshReading", "no");
+          if (
+            this.state.isAutoSync &&
+            ConfigService.getItem("defaultSyncOption")
+          ) {
+            this.setState({ isSync: true });
+            this.handleCloudSync();
+          }
+        }
+      }
+    });
   }
   async UNSAFE_componentWillReceiveProps(
     nextProps: Readonly<HeaderProps>,
@@ -135,7 +151,10 @@ class Header extends React.Component<HeaderProps, HeaderState> {
           console.error(error);
         }
       }
-      nextProps.handleFetchUserConfig();
+      if (this.state.isAutoSync && ConfigService.getItem("defaultSyncOption")) {
+        this.setState({ isSync: true });
+        await this.handleCloudSync();
+      }
     }
     if (!nextProps.isAuthed && nextProps.isAuthed !== this.props.isAuthed) {
       if (isElectron) {
@@ -216,16 +235,20 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       return false;
     }
     checkMissingBook(this.props.books);
-    toast.loading(
-      this.props.t("Start syncing") +
-        " (" +
-        this.props.t(
-          driveList.find((item) => item.value === this.props.defaultSyncOption)
-            ?.label || ""
-        ) +
-        ")",
-      { id: "syncing" }
-    );
+    if (ConfigService.getReaderConfig("isEnableKoodoSync") !== "yes") {
+      toast.loading(
+        this.props.t("Start syncing") +
+          " (" +
+          this.props.t(
+            driveList.find(
+              (item) => item.value === this.props.defaultSyncOption
+            )?.label || ""
+          ) +
+          ")",
+        { id: "syncing" }
+      );
+    }
+
     return true;
   };
   getCompareResult = async () => {
@@ -243,7 +266,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
     let config = {};
     let service = ConfigService.getItem("defaultSyncOption");
     if (!service) {
-      toast.error(this.props.t("Please add data source in the setting"));
+      toast(this.props.t("Please add data source in the setting"));
       this.setState({ isSync: false });
       return false;
     }
@@ -266,31 +289,35 @@ class Header extends React.Component<HeaderProps, HeaderState> {
         let stats = await window
           .require("electron")
           .ipcRenderer.invoke("cloud-stats", config);
-        toast.loading(
-          this.props.t("Start Transfering Data") +
-            " (" +
-            stats.completed +
-            "/" +
-            stats.total +
-            ")",
-          {
-            id: "syncing",
-          }
-        );
+        if (stats.total > 0) {
+          toast.loading(
+            this.props.t("Start Transfering Data") +
+              " (" +
+              stats.completed +
+              "/" +
+              stats.total +
+              ")",
+            {
+              id: "syncing",
+            }
+          );
+        }
       } else {
         let syncUtil = await SyncService.getSyncUtil();
         let stats = await syncUtil.getStats();
-        toast.loading(
-          this.props.t("Start Transfering Data") +
-            " (" +
-            stats.completed +
-            "/" +
-            stats.total +
-            ")",
-          {
-            id: "syncing",
-          }
-        );
+        if (stats.total > 0) {
+          toast.loading(
+            this.props.t("Start Transfering Data") +
+              " (" +
+              stats.completed +
+              "/" +
+              stats.total +
+              ")",
+            {
+              id: "syncing",
+            }
+          );
+        }
       }
     }, 1000);
     let res = await this.beforeSync();
@@ -322,6 +349,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
     if (ConfigService.getReaderConfig("isEnableKoodoSync") === "yes") {
       ConfigUtil.updateSyncData();
     }
+    //when book is empty, need to refresh the book list
     setTimeout(() => {
       this.props.history.push("/manager/home");
     }, 1000);

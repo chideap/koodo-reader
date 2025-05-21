@@ -44,10 +44,10 @@ export type stateType = {
     isSortDisplay: boolean;
     isAboutOpen: boolean;
     isShowLoading: boolean;
+    isShowPopupNote: boolean;
     isShowSupport: boolean;
     isShowNew: boolean;
     userInfo: any;
-    userConfig: any;
     isAuthed: boolean;
     isNewWarning: boolean;
     isSelectBook: boolean;
@@ -72,11 +72,13 @@ export type stateType = {
     currentBook: BookModel;
     renderBookFunc: () => void;
     importBookFunc: (file: any) => Promise<void>;
+    cloudSyncFunc: () => Promise<void>;
     renderNoteFunc: () => void;
   };
   backupPage: {
     isBackup: boolean;
     isOpenImportDialog: boolean;
+    isOpenSortShelfDialog: boolean;
     isOpenTokenDialog: boolean;
     dataSourceList: string[];
     loginOptionList: string[];

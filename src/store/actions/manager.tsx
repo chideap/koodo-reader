@@ -6,7 +6,7 @@ import BookModel from "../../models/Book";
 import PluginModel from "../../models/Plugin";
 import { Dispatch } from "redux";
 import DatabaseService from "../../utils/storage/databaseService";
-import { fetchUserConfig, fetchUserInfo } from "../../utils/request/user";
+import { fetchUserInfo } from "../../utils/request/user";
 import {
   officialDictList,
   officialTranList,
@@ -30,9 +30,6 @@ export function handleSearch(isSearch: boolean) {
 export function handleUserInfo(userInfo: any) {
   return { type: "HANDLE_USER_INFO", payload: userInfo };
 }
-export function handleUserConfig(userConfig: any) {
-  return { type: "HANDLE_USER_CONFIG", payload: userConfig };
-}
 export function handleDetailDialog(isDetailDialog: boolean) {
   return { type: "HANDLE_DETAIL_DIALOG", payload: isDetailDialog };
 }
@@ -41,6 +38,9 @@ export function handleSetting(isSettingOpen: boolean) {
 }
 export function handleSettingMode(settingMode: string) {
   return { type: "HANDLE_SETTING_MODE", payload: settingMode };
+}
+export function handleShowPopupNote(isShowPopupNote: boolean) {
+  return { type: "HANDLE_SHOW_POPUP_NOTE", payload: isShowPopupNote };
 }
 export function handleSettingDrive(settingDrive: string) {
   return { type: "HANDLE_SETTING_DRIVE", payload: settingDrive };
@@ -115,6 +115,10 @@ export function handleFetchUserInfo() {
     let userInfo: any = null;
     if (response.code === 200) {
       userInfo = response.data;
+      ConfigService.setReaderConfig(
+        "isEnableKoodoSync",
+        userInfo.is_enable_koodo_sync || "no"
+      );
     }
     if (
       userInfo &&
@@ -123,21 +127,6 @@ export function handleFetchUserInfo() {
       dispatch(handleShowSupport(true));
     }
     dispatch(handleUserInfo(userInfo));
-  };
-}
-export function handleFetchUserConfig() {
-  return async (dispatch: Dispatch) => {
-    let response = await fetchUserConfig();
-    let userConfig: any = null;
-    if (response.code === 200) {
-      userConfig = response.data;
-      console.log("UserConfig", userConfig);
-      ConfigService.setReaderConfig(
-        "isEnableKoodoSync",
-        userConfig.is_enable_koodo_sync
-      );
-    }
-    dispatch(handleUserConfig(userConfig));
   };
 }
 export function handleFetchPlugins() {

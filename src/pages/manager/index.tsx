@@ -19,6 +19,8 @@ import {
   handleDeleteDialog,
   handleAddDialog,
   handleReadingState,
+  handleShowPopupNote,
+  handleSortShelfDialog,
 } from "../../store/actions";
 import { withTranslation } from "react-i18next";
 
@@ -49,9 +51,10 @@ const mapStateToProps = (state: stateType) => {
     isShowLoading: state.manager.isShowLoading,
     isShowNew: state.manager.isShowNew,
     isShowSupport: state.manager.isShowSupport,
-    DetailDialog: state.manager.isDetailDialog,
+    isShowPopupNote: state.manager.isShowPopupNote,
     isBackup: state.backupPage.isBackup,
     isOpenImportDialog: state.backupPage.isOpenImportDialog,
+    isOpenSortShelfDialog: state.backupPage.isOpenSortShelfDialog,
   };
 };
 const actionCreator = {
@@ -68,12 +71,14 @@ const actionCreator = {
   handleAddDialog,
   handleFeedbackDialog,
   handleDetailDialog,
+  handleSortShelfDialog,
   handleLoadingDialog,
   handleNewDialog,
   handleShowSupport,
   handleBackupDialog,
   handleImportDialog,
   handleReadingState,
+  handleShowPopupNote,
 };
 export default connect(
   mapStateToProps,

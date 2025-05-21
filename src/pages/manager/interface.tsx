@@ -19,12 +19,14 @@ export interface ManagerProps extends RouteComponentProps<any> {
   isSortDisplay: boolean;
   isBackup: boolean;
   isSettingOpen: boolean;
+  isShowPopupNote: boolean;
   isAboutOpen: boolean;
   isShowLoading: boolean;
   isShowNew: boolean;
   isShowSupport: boolean;
   isAuthed: boolean;
   isOpenFeedbackDialog: boolean;
+  isOpenSortShelfDialog: boolean;
   dragItem: string;
   handleFetchBooks: () => void;
   handleFetchPlugins: () => void;
@@ -45,6 +47,8 @@ export interface ManagerProps extends RouteComponentProps<any> {
   handleImportDialog: (isOpenImportDialog: boolean) => void;
   handleReadingState: (isReading: boolean) => void;
   handleSetting: (isSettingOpen: boolean) => void;
+  handleShowPopupNote: (isShowPopupNote: boolean) => void;
+  handleSortShelfDialog: (isOpenSortShelfDialog: boolean) => void;
   t: (title: string) => string;
 }
 
