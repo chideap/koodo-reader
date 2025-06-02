@@ -372,6 +372,7 @@ class AccountSetting extends React.Component<
                     let userRequest = await getUserRequest();
                     let response = await userRequest.sendEmailCode({
                       email: this.state.loginConfig.email,
+                      lang: ConfigService.getReaderConfig("lang"),
                     });
                     if (response.code === 200) {
                       toast.success(this.props.t("Send successfully"), {
@@ -671,11 +672,17 @@ class AccountSetting extends React.Component<
         <div
           style={{
             position: "absolute",
-            bottom: "20px",
-            right: "20px",
+            bottom: "0",
+            right: "0",
             display: "flex",
-            justifyContent: "center",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            paddingRight: "10px",
+            width: "100%",
+            height: "40px",
+            zIndex: 100,
           }}
+          className="setting-dialog-pro-button"
         >
           <div
             onClick={async () => {

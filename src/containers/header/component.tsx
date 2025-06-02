@@ -47,7 +47,6 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       isNewVersion: false,
       width: document.body.clientWidth,
       isDataChange: false,
-      isDeveloperVer: false,
       isHidePro: false,
       isSync: false,
       isAutoSync: ConfigService.getReaderConfig("isDisableAutoSync") !== "yes",
@@ -78,10 +77,6 @@ class Header extends React.Component<HeaderProps, HeaderState> {
           "storageLocation",
           ConfigService.getReaderConfig("storageLocation")
         );
-      }
-
-      if (ConfigService.getReaderConfig("appInfo") === "dev") {
-        this.setState({ isDeveloperVer: true });
       }
       if (ConfigService.getReaderConfig("isHidePro") === "yes") {
         this.setState({ isHidePro: true });
@@ -115,7 +110,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       this.props.handleFetchBookmarks();
     });
     this.props.handleCloudSyncFunc(this.handleCloudSync);
-    document.addEventListener("visibilitychange", () => {
+    document.addEventListener("visibilitychange", async () => {
       if (document.visibilityState === "visible") {
         if (ConfigService.getItem("isFinshReading") === "yes") {
           ConfigService.setItem("isFinshReading", "no");
@@ -123,6 +118,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
             this.state.isAutoSync &&
             ConfigService.getItem("defaultSyncOption")
           ) {
+            await this.props.handleFetchUserInfo();
             this.setState({ isSync: true });
             this.handleCloudSync();
           }
@@ -151,6 +147,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
           console.error(error);
         }
       }
+      await this.props.handleFetchUserInfo();
       if (this.state.isAutoSync && ConfigService.getItem("defaultSyncOption")) {
         this.setState({ isSync: true });
         await this.handleCloudSync();
@@ -223,12 +220,14 @@ class Header extends React.Component<HeaderProps, HeaderState> {
     this.setState({ isSync: false });
   };
   beforeSync = async () => {
-    if (!this.props.defaultSyncOption) {
+    if (!ConfigService.getItem("defaultSyncOption")) {
       toast.error(this.props.t("Please add data source in the setting"));
       this.setState({ isSync: false });
       return false;
     }
-    let config = await getCloudConfig(this.props.defaultSyncOption);
+    let config = await getCloudConfig(
+      ConfigService.getItem("defaultSyncOption") || ""
+    );
     if (Object.keys(config).length === 0) {
       toast.error(this.props.t("Cannot get sync config"));
       this.setState({ isSync: false });
@@ -241,7 +240,8 @@ class Header extends React.Component<HeaderProps, HeaderState> {
           " (" +
           this.props.t(
             driveList.find(
-              (item) => item.value === this.props.defaultSyncOption
+              (item) =>
+                item.value === ConfigService.getItem("defaultSyncOption")
             )?.label || ""
           ) +
           ")",
@@ -290,22 +290,49 @@ class Header extends React.Component<HeaderProps, HeaderState> {
           .require("electron")
           .ipcRenderer.invoke("cloud-stats", config);
         if (stats.total > 0) {
-          toast.loading(
-            this.props.t("Start Transfering Data") +
-              " (" +
-              stats.completed +
-              "/" +
-              stats.total +
-              ")",
-            {
-              id: "syncing",
-            }
-          );
+          if (stats.hasFailedTasks) {
+            toast.error(
+              this.props.t(
+                "Tasks failed after multiple retries, please check the network connection"
+              ),
+              {
+                id: "syncing",
+              }
+            );
+            clearInterval(this.timer);
+            this.setState({ isSync: false });
+            return;
+          } else {
+            toast.loading(
+              this.props.t("Start Transfering Data") +
+                " (" +
+                stats.completed +
+                "/" +
+                stats.total +
+                ")",
+              {
+                id: "syncing",
+              }
+            );
+          }
         }
       } else {
         let syncUtil = await SyncService.getSyncUtil();
         let stats = await syncUtil.getStats();
         if (stats.total > 0) {
+          if (stats.hasFailedTasks) {
+            toast.error(
+              this.props.t(
+                "Tasks failed after multiple retries, please check the network connection"
+              ),
+              {
+                id: "syncing",
+              }
+            );
+            clearInterval(this.timer);
+            this.setState({ isSync: false });
+            return;
+          }
           toast.loading(
             this.props.t("Start Transfering Data") +
               " (" +
@@ -336,10 +363,17 @@ class Header extends React.Component<HeaderProps, HeaderState> {
     toast.success(this.props.t("Synchronisation successful"), {
       id: "syncing",
     });
-    if (this.props.defaultSyncOption === "adrive") {
+    setTimeout(() => {
+      toast.dismiss("syncing");
+    }, 1000);
+    if (
+      ConfigService.getItem("defaultSyncOption") === "adrive" &&
+      ConfigService.getReaderConfig("hasShowAliyunWarning") !== "yes"
+    ) {
+      ConfigService.setReaderConfig("hasShowAliyunWarning", "yes");
       toast.success(
         this.props.t(
-          "We have bypassed the synchronization of book cover for Aliyun Drive"
+          "We have bypassed the synchronization of book cover for Aliyun Drive, covers will be downloaded automatically when you open the book next time."
         ),
         {
           duration: 4000,
@@ -491,6 +525,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
               }
               this.setState({ isSync: true });
               if (this.props.isAuthed) {
+                await this.props.handleFetchUserInfo();
                 this.handleCloudSync();
               } else {
                 this.handleLocalSync();
@@ -527,30 +562,16 @@ class Header extends React.Component<HeaderProps, HeaderState> {
               <Trans>Pro version</Trans>
               <span> </span>
             </span>
-            {this.state.isDeveloperVer && (
-              <span
-                className="icon-close icon-pro-close"
-                onClick={() => {
-                  ConfigService.setReaderConfig("isHidePro", "yes");
-                  this.setState({ isHidePro: true });
-                }}
-              ></span>
-            )}
+
+            <span
+              className="icon-close icon-pro-close"
+              onClick={() => {
+                ConfigService.setReaderConfig("isHidePro", "yes");
+                this.setState({ isHidePro: true });
+              }}
+            ></span>
           </div>
         ) : null}
-        {this.state.isDeveloperVer &&
-          this.state.isHidePro &&
-          !this.props.isAuthed && (
-            <div
-              className="header-report-container"
-              style={{ textDecoration: "underline" }}
-              onClick={() => {
-                this.props.handleFeedbackDialog(true);
-              }}
-            >
-              <Trans>Report</Trans>
-            </div>
-          )}
 
         <ImportLocal
           {...{

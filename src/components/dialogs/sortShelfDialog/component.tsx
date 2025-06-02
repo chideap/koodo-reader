@@ -98,8 +98,9 @@ class SortShelfDialog extends React.Component<
               scrollSensitivity={140} // Distance from edge that triggers scrolling (px)
               scrollSpeed={20} // Scrolling speed
               bubbleScroll={true}
+              filter={"input"}
+              preventOnFilter={false}
               onEnd={() => {
-                console.log("onEnd", this.state.sortedShelfList);
                 let sortedShelfList = this.state.sortedShelfList.map(
                   (item) => item.name
                 );

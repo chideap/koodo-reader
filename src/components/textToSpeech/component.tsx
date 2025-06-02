@@ -8,6 +8,7 @@ import {
   getAllVoices,
   handleContextMenu,
   sleep,
+  splitSentences,
   WEBSITE_URL,
 } from "../../utils/common";
 import { isElectron } from "react-device-detect";
@@ -45,6 +46,7 @@ class TextToSpeech extends React.Component<
     if (this.state.isAudioOn) {
       window.speechSynthesis && window.speechSynthesis.cancel();
       this.setState({ isAudioOn: false });
+      this.nodeList = [];
     }
     const setSpeech = () => {
       return new Promise((resolve) => {
@@ -70,6 +72,7 @@ class TextToSpeech extends React.Component<
       window.speechSynthesis && window.speechSynthesis.cancel();
       TTSUtil.pauseAudio();
       this.setState({ isAudioOn: false });
+      this.nodeList = [];
     } else {
       if (isElectron) {
         this.customVoices = TTSUtil.getVoiceList(this.props.plugins);
@@ -108,9 +111,15 @@ class TextToSpeech extends React.Component<
     if (ConfigService.getReaderConfig("isSliding") === "yes") {
       await sleep(1000);
     }
-    this.nodeList = (await this.props.htmlBook.rendition.audioText()).filter(
+    let nodeTextList = (await this.props.htmlBook.rendition.audioText()).filter(
       (item: string) => item && item.trim()
     );
+    let rawNodeList = nodeTextList.map((text) => {
+      return splitSentences(text);
+    });
+    this.nodeList = rawNodeList
+      .flat()
+      .filter((item) => item !== "img" && !item.startsWith("img"));
     if (this.nodeList.length === 0) {
       await this.props.htmlBook.rendition.next();
       this.nodeList = await this.handleGetText();
@@ -141,7 +150,7 @@ class TextToSpeech extends React.Component<
     for (let index = 0; index < this.nodeList.length; index++) {
       let currentText = this.nodeList[index];
       let style = "background: #f3a6a68c;";
-      this.props.htmlBook.rendition.highlightNode(currentText, style);
+      this.props.htmlBook.rendition.highlightAudioNode(currentText, style);
 
       if (index > TTSUtil.getAudioPaths().length - 1) {
         while (true) {
@@ -155,8 +164,12 @@ class TextToSpeech extends React.Component<
         parseFloat(ConfigService.getReaderConfig("voiceSpeed")) || 1
       );
       let visibleTextList = await this.props.htmlBook.rendition.visibleText();
+      let lastVisibleTextList = splitSentences(
+        visibleTextList[visibleTextList.length - 1]
+      ).filter((item) => item !== "img" && !item.startsWith("img"));
       if (
-        this.nodeList[index] === visibleTextList[visibleTextList.length - 1]
+        this.nodeList[index] ===
+        lastVisibleTextList[lastVisibleTextList.length - 1]
       ) {
         await this.props.htmlBook.rendition.next();
       }
@@ -180,7 +193,7 @@ class TextToSpeech extends React.Component<
   async handleSystemRead(index) {
     let currentText = this.nodeList[index];
     let style = "background: #f3a6a68c;";
-    this.props.htmlBook.rendition.highlightNode(currentText, style);
+    this.props.htmlBook.rendition.highlightAudioNode(currentText, style);
 
     let res = await this.handleSystemSpeech(
       index,
@@ -189,10 +202,13 @@ class TextToSpeech extends React.Component<
     );
 
     if (res === "start") {
-      index++;
       let visibleTextList = await this.props.htmlBook.rendition.visibleText();
+      let lastVisibleTextList = splitSentences(
+        visibleTextList[visibleTextList.length - 1]
+      ).filter((item) => item !== "img" && !item.startsWith("img"));
       if (
-        this.nodeList[index] === visibleTextList[visibleTextList.length - 1]
+        this.nodeList[index] ===
+        lastVisibleTextList[lastVisibleTextList.length - 1]
       ) {
         await this.props.htmlBook.rendition.next();
       }
@@ -211,6 +227,7 @@ class TextToSpeech extends React.Component<
         await this.handleAudio();
         return;
       }
+      index++;
       await this.handleSystemRead(index);
     } else if (res === "end") {
       return;

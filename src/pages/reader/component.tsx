@@ -126,7 +126,10 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
         }
 
       case "left":
-        if (this.props.isNavLocked || this.props.isSearch) {
+        if (
+          this.props.isNavLocked ||
+          ConfigService.getReaderConfig("isTempLocked") === "yes"
+        ) {
           break;
         } else {
           this.setState({ isOpenLeftPanel: false });
@@ -196,27 +199,28 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
             >
               <span className="icon-dropdown next-chapter-single"></span>
             </div>
-            {this.props.isAuthed && (
-              <div
-                className="next-chapter-single-container"
-                onClick={async () => {
-                  this.props.handleMenuMode("assistant");
-                  this.props.handleOriginalText(
-                    await this.props.htmlBook.rendition.chapterText()
-                  );
-                  this.props.handleOpenMenu(true);
-                }}
-                style={{
-                  bottom: "55px",
-                  transform: "rotate(0deg)",
-                  fontWeight: "bold",
-                  fontSize: "17px",
-                  right: this.props.isSettingLocked ? 315 : 15,
-                }}
-              >
-                AI
-              </div>
-            )}
+            {this.props.isAuthed &&
+              ConfigService.getReaderConfig("isHideAIButton") !== "yes" && (
+                <div
+                  className="next-chapter-single-container"
+                  onClick={async () => {
+                    this.props.handleMenuMode("assistant");
+                    this.props.handleOriginalText(
+                      await this.props.htmlBook.rendition.chapterText()
+                    );
+                    this.props.handleOpenMenu(true);
+                  }}
+                  style={{
+                    bottom: "55px",
+                    transform: "rotate(0deg)",
+                    fontWeight: "bold",
+                    fontSize: "17px",
+                    right: this.props.isSettingLocked ? 315 : 15,
+                  }}
+                >
+                  AI
+                </div>
+              )}
           </>
         )}
         {ConfigService.getReaderConfig("isHideMenuButton") !== "yes" && (
@@ -228,7 +232,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
               this.handleEnterReader("bottom");
               this.handleEnterReader("top");
             }}
-            style={{ right: this.props.isSettingLocked ? 315 : 15 }}
+            style={{ right: this.props.isSettingLocked ? 305 : 5 }}
           >
             <span className="icon-grid reader-setting-icon"></span>
           </div>
@@ -238,7 +242,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
           <div
             style={{
               position: "absolute",
-              right: this.props.isSettingLocked ? 315 : 15,
+              right: this.props.isSettingLocked ? 300 : 0,
             }}
           >
             <div

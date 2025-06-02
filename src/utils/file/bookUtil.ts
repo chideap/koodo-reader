@@ -309,37 +309,6 @@ class BookUtil {
       return true;
     }
   }
-  static async uploadCacheBook(key: string) {
-    let service = ConfigService.getItem("defaultSyncOption");
-    if (!service) {
-      return;
-    }
-    if (isElectron) {
-      const { ipcRenderer } = window.require("electron");
-
-      let tokenConfig = await getCloudConfig(service);
-
-      await ipcRenderer.invoke("cloud-upload", {
-        ...tokenConfig,
-        fileName: "cache-" + key + ".zip",
-        service: service,
-        type: "book",
-        storagePath: getStorageLocation(),
-      });
-    } else {
-      let syncUtil = await SyncService.getSyncUtil();
-      let bookBuffer: any = await this.fetchBook(
-        "cache-" + key,
-        "zip",
-        true,
-        ""
-      );
-      let bookBlob = new Blob([bookBuffer], {
-        type: "application/zip",
-      });
-      await syncUtil.uploadFile("cache-" + key + ".zip", "book", bookBlob);
-    }
-  }
   static async downloadBook(key: string, format: string) {
     let service = ConfigService.getItem("defaultSyncOption");
     if (!service) {
@@ -387,25 +356,36 @@ class BookUtil {
       const { ipcRenderer } = window.require("electron");
 
       let tokenConfig = await getCloudConfig(service);
-
-      await ipcRenderer.invoke("cloud-upload", {
+      let result = await ipcRenderer.invoke("cloud-upload", {
         ...tokenConfig,
         fileName: key + "." + format.toLowerCase(),
         service: service,
         type: "book",
         storagePath: getStorageLocation(),
       });
+      if (!result) {
+        toast.error(i18n.t("Upload failed"), {
+          id: "upload-book",
+        });
+        return;
+      }
     } else {
       let syncUtil = await SyncService.getSyncUtil();
       let bookBuffer: any = await this.fetchBook(key, format, true, "");
       let bookBlob = new Blob([bookBuffer], {
         type: CommonTool.getMimeType(format.toLowerCase()),
       });
-      await syncUtil.uploadFile(
+      let result = await syncUtil.uploadFile(
         key + "." + format.toLowerCase(),
         "book",
         bookBlob
       );
+      if (!result) {
+        toast.error(i18n.t("Upload failed"), {
+          id: "upload-book",
+        });
+        return;
+      }
     }
   }
   static async deleteCloudBook(key: string, format: string) {

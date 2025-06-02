@@ -279,35 +279,42 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
               <>
                 {driveInputConfig[this.props.settingDrive].map((item) => {
                   return (
-                    <input
-                      type={item.type}
-                      name={item.value}
-                      key={item.value}
-                      placeholder={
-                        this.props.t(item.label) +
-                        (item.required
-                          ? ""
-                          : " (" + this.props.t("Optional") + ")")
-                      }
-                      onChange={(e) => {
-                        if (e.target.value) {
-                          this.setState((prevState) => ({
-                            driveConfig: {
-                              ...prevState.driveConfig,
-                              [item.value]: e.target.value.trim(),
-                            },
-                          }));
+                    <>
+                      <input
+                        type={item.type}
+                        name={item.value}
+                        key={item.value}
+                        placeholder={
+                          this.props.t(item.label) +
+                          (item.required
+                            ? ""
+                            : " (" + this.props.t("Optional") + ")")
                         }
-                      }}
-                      onContextMenu={() => {
-                        handleContextMenu(
-                          "token-dialog-" + item.value + "-box",
-                          true
-                        );
-                      }}
-                      id={"token-dialog-" + item.value + "-box"}
-                      className="token-dialog-username-box"
-                    />
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            this.setState((prevState) => ({
+                              driveConfig: {
+                                ...prevState.driveConfig,
+                                [item.value]: e.target.value.trim(),
+                              },
+                            }));
+                          }
+                        }}
+                        onContextMenu={() => {
+                          handleContextMenu(
+                            "token-dialog-" + item.value + "-box",
+                            true
+                          );
+                        }}
+                        id={"token-dialog-" + item.value + "-box"}
+                        className="token-dialog-username-box"
+                      />
+                      {item.example && (
+                        <div style={{ marginTop: "5px", fontSize: "12px" }}>
+                          {this.props.t("Example")}: {item.example}
+                        </div>
+                      )}
+                    </>
                   );
                 })}
               </>
@@ -347,6 +354,21 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
               >
                 {this.props.t(
                   "Only WebDAV service provided by Alist is directly supported in Browser, Other WebDAV services need to enable CORS to work properly"
+                )}
+              </div>
+            )}
+            {this.props.settingDrive === "s3compatible" && !isElectron && (
+              <div
+                className="token-dialog-tip"
+                style={{
+                  marginTop: "10px",
+                  fontSize: "13px",
+                  lineHeight: "16px",
+                  color: "rgba(231, 69, 69, 0.8)",
+                }}
+              >
+                {this.props.t(
+                  "Some S3 services are not compatible with browser environments. If you encounter connection issues, please refer to the service provider's official documentation for instructions on enabling CORS."
                 )}
               </div>
             )}

@@ -8,7 +8,10 @@ import animationNew from "../../../assets/lotties/new.json";
 import { openExternalUrl, WEBSITE_URL } from "../../../utils/common";
 import { isElectron } from "react-device-detect";
 import { sleep } from "../../../utils/common";
-import { checkStableUpdate } from "../../../utils/request/common";
+import {
+  checkDeveloperUpdate,
+  checkStableUpdate,
+} from "../../../utils/request/common";
 import {
   ConfigService,
   TokenService,
@@ -30,35 +33,36 @@ class UpdateInfo extends React.Component<UpdateInfoProps, UpdateInfoState> {
       updateLog: "",
     };
   }
-  componentDidMount() {
+  async componentDidMount() {
     if (!this.props.currentBook.key) {
-      checkStableUpdate().then(async (res) => {
-        const newVersion = res.version;
-        if (!isElectron) {
-          return;
+      if (!isElectron) {
+        return;
+      }
+      let res;
+      if (ConfigService.getReaderConfig("updateChannel") === "stable") {
+        res = await checkStableUpdate();
+      } else {
+        res = await checkDeveloperUpdate();
+      }
+      const newVersion = res.version;
+      await sleep(500);
+      if (
+        res.stable === "no" &&
+        ConfigService.getReaderConfig("skipVersion") === newVersion
+      ) {
+        return;
+      }
+      if (packageInfo.version.localeCompare(newVersion) < 0) {
+        if (
+          ConfigService.getReaderConfig("isDisableUpdate") !== "yes" ||
+          this.props.isAuthed
+        ) {
+          this.setState({ updateLog: res });
+          this.props.handleNewDialog(true);
+        } else {
+          this.props.handleNewWarning(true);
         }
-        await sleep(500);
-
-        if (packageInfo.version.localeCompare(newVersion) < 0) {
-          if (
-            ConfigService.getReaderConfig("isDisableUpdate") !== "yes" ||
-            this.props.isAuthed
-          ) {
-            this.setState({ updateLog: res });
-            this.props.handleNewDialog(true);
-          } else {
-            this.props.handleNewWarning(true);
-          }
-        }
-        ConfigService.setReaderConfig(
-          "appInfo",
-          packageInfo.version.localeCompare(newVersion) < 0
-            ? "new"
-            : packageInfo.version.localeCompare(newVersion) === 0
-            ? "stable"
-            : "dev"
-        );
-      });
+      }
     }
   }
   renderList = (arr: any[]) => {
@@ -84,6 +88,21 @@ class UpdateInfo extends React.Component<UpdateInfoProps, UpdateInfoState> {
             <div className="new-version-title">
               <Trans>Update to</Trans>
               {" " + this.state.updateLog.version}
+              <div
+                className="new-version-badge"
+                style={{
+                  backgroundColor:
+                    this.state.updateLog.stable === "yes"
+                      ? "rgba(94, 178, 148, 1)"
+                      : "rgba(92, 143, 211, 1)",
+                }}
+              >
+                {this.props.t(
+                  this.state.updateLog.stable === "yes"
+                    ? "Stable version"
+                    : "Developer version"
+                )}
+              </div>
             </div>
             {(this.props.isAuthed &&
               this.state.updateLog.skippable === "yes") ||
@@ -125,12 +144,45 @@ class UpdateInfo extends React.Component<UpdateInfoProps, UpdateInfoState> {
                 <div
                   className="new-version-open"
                   onClick={() => {
-                    openExternalUrl(WEBSITE_URL);
+                    if (
+                      ConfigService.getReaderConfig("lang") &&
+                      ConfigService.getReaderConfig("lang").startsWith("zh")
+                    ) {
+                      openExternalUrl(WEBSITE_URL + "/zh/download");
+                    } else {
+                      openExternalUrl(WEBSITE_URL + "/en/download");
+                    }
                   }}
                 >
                   <Trans>Download</Trans>
                 </div>
               </div>
+              {this.state.updateLog.stable !== "yes" && (
+                <div
+                  className="new-version-skip"
+                  onClick={() => {
+                    ConfigService.setReaderConfig(
+                      "skipVersion",
+                      this.state.updateLog.version
+                    );
+                    this.handleClose();
+                  }}
+                  style={{ marginTop: 5 }}
+                >
+                  <Trans>Skip this version</Trans>
+                </div>
+              )}
+              {this.state.updateLog.stable !== "yes" && (
+                <div
+                  className="new-version-skip"
+                  onClick={() => {
+                    ConfigService.setReaderConfig("updateChannel", "stable");
+                    this.handleClose();
+                  }}
+                >
+                  <Trans>Only receive stable version</Trans>
+                </div>
+              )}
 
               {this.state.updateLog && (
                 <>

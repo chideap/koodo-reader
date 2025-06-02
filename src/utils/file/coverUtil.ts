@@ -11,6 +11,7 @@ import {
   TokenService,
 } from "../../assets/lib/kookit-extra-browser.min";
 import { getCloudConfig } from "./common";
+import toast from "react-hot-toast";
 declare var window: any;
 
 class CoverUtil {
