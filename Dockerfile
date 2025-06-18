@@ -47,7 +47,7 @@ RUN echo '#!/bin/sh' > /start.sh && \
 # Set default environment variables (can be overridden at runtime)
 ENV SERVER_USERNAME=admin
 ENV SERVER_PASSWORD=securePass123
-ENV PORT=8080
+ENV SERVER_PASSWORD_FILE=my_secret
 
 # Define volume for uploads directory
 VOLUME ["/app/uploads"]

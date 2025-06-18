@@ -6,6 +6,7 @@ export const driveList = [
     isPro: false,
     support: ["desktop", "browser", "phone"],
     scoped: false,
+    isCNAvailable: true,
   },
   {
     label: "Dropbox",
@@ -14,6 +15,7 @@ export const driveList = [
     isPro: true,
     support: ["desktop", "browser", "phone"],
     scoped: true,
+    isCNAvailable: false,
   },
   {
     label: "OneDrive",
@@ -22,6 +24,7 @@ export const driveList = [
     isPro: true,
     support: ["desktop", "browser", "phone"],
     scoped: true,
+    isCNAvailable: true,
   },
   {
     label: "Google Drive",
@@ -30,6 +33,7 @@ export const driveList = [
     isPro: true,
     support: ["desktop", "browser", "phone"],
     scoped: true,
+    isCNAvailable: false,
   },
   {
     label: "MEGA",
@@ -38,6 +42,7 @@ export const driveList = [
     isPro: true,
     support: ["desktop", "browser"],
     scoped: false,
+    isCNAvailable: false,
   },
   {
     label: "Box",
@@ -46,6 +51,7 @@ export const driveList = [
     isPro: true,
     support: ["desktop", "browser", "phone"],
     scoped: false,
+    isCNAvailable: false,
   },
   {
     label: "pCloud",
@@ -54,6 +60,7 @@ export const driveList = [
     isPro: true,
     support: ["desktop", "phone"],
     scoped: true,
+    isCNAvailable: false,
   },
   {
     label: "Aliyun Drive",
@@ -62,6 +69,25 @@ export const driveList = [
     isPro: true,
     support: ["desktop", "phone"],
     scoped: false,
+    isCNAvailable: true,
+  },
+  {
+    label: "OneDrive (Experimental)",
+    value: "microsoft_exp",
+    icon: "icon-onedrive",
+    isPro: true,
+    support: ["desktop", "browser", "phone"],
+    scoped: false,
+    isCNAvailable: true,
+  },
+  {
+    label: "Google Drive (Experimental)",
+    value: "google_exp",
+    icon: "icon-googledrive",
+    isPro: true,
+    support: ["desktop", "browser", "phone"],
+    scoped: false,
+    isCNAvailable: false,
   },
   {
     label: "S3 Compatible",
@@ -70,6 +96,7 @@ export const driveList = [
     isPro: true,
     support: ["desktop", "browser", "phone"],
     scoped: false,
+    isCNAvailable: true,
   },
   {
     label: "Docker",
@@ -78,6 +105,7 @@ export const driveList = [
     isPro: true,
     support: ["desktop", "browser", "phone"],
     scoped: true,
+    isCNAvailable: true,
   },
   {
     label: "FTP",
@@ -86,6 +114,7 @@ export const driveList = [
     isPro: false,
     support: ["desktop"],
     scoped: false,
+    isCNAvailable: true,
   },
   {
     label: "SFTP",
@@ -94,6 +123,7 @@ export const driveList = [
     isPro: false,
     support: ["desktop"],
     scoped: false,
+    isCNAvailable: true,
   },
 ];
 interface ConfigItem {
@@ -307,6 +337,22 @@ export const driveInputConfig: DriveInputConfig = {
     },
   ],
   microsoft: [
+    {
+      label: "Token",
+      value: "token",
+      type: "text",
+      required: true,
+    },
+  ],
+  google_exp: [
+    {
+      label: "Token",
+      value: "token",
+      type: "text",
+      required: true,
+    },
+  ],
+  microsoft_exp: [
     {
       label: "Token",
       value: "token",
