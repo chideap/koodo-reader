@@ -15,7 +15,7 @@ import packageJson from "../../../package.json";
 import toast from "react-hot-toast";
 import i18n from "../../i18n";
 import { handleExitApp } from "./common";
-let userRequest: UserRequest;
+let userRequest: UserRequest | undefined;
 export const loginRegister = async (service: string, code: string) => {
   let deviceName = detectBrowser();
   let userRequest = await getUserRequest();
@@ -77,6 +77,9 @@ export const getUserRequest = async () => {
   userRequest = new UserRequest(TokenService, ConfigService);
   return userRequest;
 };
+export const resetUserRequest = () => {
+  userRequest = undefined;
+};
 export const getOSName = () => {
   return isElectron ? osName : browserName;
 };
@@ -103,4 +106,21 @@ export const detectBrowser = () => {
 };
 export const getOsVersionNumber = (): string => {
   return isElectron ? osVersion : browserVersion;
+};
+export const resetKoodoSync = (service: string) => {
+  if (
+    ConfigService.getItem("defaultSyncOption") &&
+    ConfigService.getItem("defaultSyncOption") !== service
+  ) {
+    if (ConfigService.getReaderConfig("isEnableKoodoSync") === "yes") {
+      updateUserConfig({
+        is_enable_koodo_sync: "no",
+      });
+      setTimeout(() => {
+        updateUserConfig({
+          is_enable_koodo_sync: "yes",
+        });
+      }, 1000);
+    }
+  }
 };

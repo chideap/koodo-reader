@@ -13,7 +13,6 @@ class SyncService {
   static async getSyncUtil() {
     let service = ConfigService.getItem("defaultSyncOption");
     if (!service) {
-      // toast(i18n.t("Please select a sync service"));
       let thirdpartyRequest = await getThirdpartyRequest();
       return new SyncUtil("", {}, thirdpartyRequest);
     }
@@ -29,7 +28,7 @@ class SyncService {
     }
     return this.syncUtilCache[service];
   }
-  static async removeSyncUtil(service) {
+  static removeSyncUtil(service) {
     delete this.syncUtilCache[service];
   }
   static async getPickerUtil(service: string) {

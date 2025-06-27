@@ -182,7 +182,7 @@ class BookUtil {
       !(await this.isBookExist("cache-" + book.key, "zip", book.path))
     ) {
       if (!ConfigService.getItem("defaultSyncOption")) {
-        toast(i18n.t("Please select a sync service"));
+        toast(i18n.t("Please add data source in the setting"));
         return;
       }
       toast.loading(i18n.t("Downloading"), {
@@ -254,6 +254,7 @@ class BookUtil {
           isMergeWord: ConfigService.getReaderConfig("isMergeWord"),
           isAutoFullscreen: ConfigService.getReaderConfig("isAutoFullscreen"),
           isPreventSleep: ConfigService.getReaderConfig("isPreventSleep"),
+          isAlwaysOnTop: ConfigService.getReaderConfig("isAlwaysOnTop"),
         });
       }
     } else {
@@ -397,7 +398,6 @@ class BookUtil {
     } else {
       let syncUtil = await SyncService.getSyncUtil();
       let bookBuffer: any = await this.fetchBook(key, format, true, "");
-      console.log("upload book", key, format, bookBuffer);
       let bookBlob = new Blob([bookBuffer], {
         type: CommonTool.getMimeType(format.toLowerCase()),
       });

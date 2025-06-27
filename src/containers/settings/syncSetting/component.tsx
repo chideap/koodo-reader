@@ -26,7 +26,7 @@ import {
   onSyncCallback,
 } from "../../../utils/request/thirdparty";
 import SyncService from "../../../utils/storage/syncService";
-import { updateUserConfig } from "../../../utils/request/user";
+import { resetKoodoSync, updateUserConfig } from "../../../utils/request/user";
 declare var window: any;
 class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
   constructor(props: SettingInfoProps) {
@@ -51,7 +51,6 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
         ConfigService.getReaderConfig("isDeleteShelfBook") === "yes",
       isHideShelfBook:
         ConfigService.getReaderConfig("isHideShelfBook") === "yes",
-      isPreventSleep: ConfigService.getReaderConfig("isPreventSleep") === "yes",
       isOpenInMain: ConfigService.getReaderConfig("isOpenInMain") === "yes",
       isDisableUpdate:
         ConfigService.getReaderConfig("isDisableUpdate") === "yes",
@@ -151,10 +150,11 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
     }
     toast.success(this.props.t("Deletion successful"));
   };
-  handleSetDefaultSyncOption = (event: any) => {
+  handleSetDefaultSyncOption = async (event: any) => {
     if (!event.target.value) {
       return;
     }
+    resetKoodoSync(event.target.value);
     ConfigService.setItem("defaultSyncOption", event.target.value);
     this.props.handleFetchDefaultSyncOption();
     toast.success(this.props.t("Change successful"));
@@ -201,7 +201,7 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
         this.state.driveConfig.token
       );
     }
-    if (this.props.isAuthed) {
+    if (this.props.isAuthed && !ConfigService.getItem("defaultSyncOption")) {
       ConfigService.setItem("defaultSyncOption", this.props.settingDrive);
       this.props.handleFetchDefaultSyncOption();
     }
@@ -523,6 +523,9 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                   value={item.value}
                   key={item.value}
                   className="lang-setting-option"
+                  selected={
+                    item.value === this.props.settingDrive ? true : false
+                  }
                 >
                   {this.props.t(item.label) + (item.isPro ? " (Pro)" : "")}
                 </option>
@@ -567,7 +570,9 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
             <select
               name=""
               className="lang-setting-dropdown"
-              onChange={this.handleSetDefaultSyncOption}
+              onChange={(event) => {
+                this.handleSetDefaultSyncOption(event);
+              }}
             >
               {[
                 { label: "Please select", value: "", isPro: false },

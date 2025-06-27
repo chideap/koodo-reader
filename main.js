@@ -22,11 +22,10 @@ let mainWin;
 let readerWindow;
 let urlWindow;
 let mainView;
-let chatView;
+let chatWindow;
 let dbConnection = {};
 let syncUtilCache = {};
 let pickerUtilCache = {};
-let isChatExpand = false;
 const singleInstance = app.requestSingleInstanceLock();
 var filePath = null;
 if (process.platform != "darwin" && process.argv.length >= 2) {
@@ -102,9 +101,7 @@ const getSyncUtil = async (config, isUseCache = true) => {
   return syncUtilCache[config.service];
 }
 const removeSyncUtil = (config) => {
-  if (syncUtilCache[config.service]) {
-    syncUtilCache[config.service] = null;
-  }
+  delete syncUtilCache[config.service];
 }
 const getPickerUtil = async (config, isUseCache = true) => {
   if (!isUseCache || !pickerUtilCache[config.service]) {
@@ -141,7 +138,11 @@ const decrypt = (encryptedText, key) => {
   return result;
 }
 const createMainWin = () => {
+
   mainWin = new BrowserWindow(options);
+  if (store.get("isAlwaysOnTop") === "yes") {
+    mainWin.setAlwaysOnTop(true);
+  }
 
   if (!isDev) {
     Menu.setApplicationMenu(null);
@@ -160,15 +161,6 @@ const createMainWin = () => {
       if (!mainWin) return
       let { width, height } = mainWin.getContentBounds()
       mainView.setBounds({ x: 0, y: 0, width: width, height: height })
-    }
-    if (chatView) {
-      if (!mainWin) return
-      let { width, height } = mainWin.getContentBounds()
-      chatView.webContents.executeJavaScript(`
-          window.$chatwoot.toggle('close');
-        `)
-      chatView.setBounds({ x: width - 80, y: height - 100, width: 80, height: 80 })
-      isChatExpand = false;
     }
   });
   mainWin.on("maximize", () => {
@@ -202,6 +194,7 @@ const createMainWin = () => {
       console.log(powerSaveBlocker.isStarted(id));
     }
 
+
     if (isAutoFullscreen === "yes") {
       readerWindow = new BrowserWindow(options);
       readerWindow.loadURL(url);
@@ -219,6 +212,9 @@ const createMainWin = () => {
       });
       readerWindow.loadURL(url);
       // readerWindow.webContents.openDevTools();
+    }
+    if (store.get("isAlwaysOnTop") === "yes") {
+      readerWindow.setAlwaysOnTop(true);
     }
     readerWindow.on("close", (event) => {
       if (!readerWindow.isDestroyed()) {
@@ -430,6 +426,25 @@ const createMainWin = () => {
     delete dbConnection[dbName];
     db.close();
   });
+  ipcMain.handle("set-always-on-top", async (event, config) => {
+    store.set("isAlwaysOnTop", config.isAlwaysOnTop);
+    if (mainWin && !mainWin.isDestroyed()) {
+      if (config.isAlwaysOnTop === "yes") {
+        mainWin.setAlwaysOnTop(true);
+      } else {
+        mainWin.setAlwaysOnTop(false);
+      }
+
+    }
+    if (readerWindow && !readerWindow.isDestroyed()) {
+      if (config.isAlwaysOnTop === "yes") {
+        readerWindow.setAlwaysOnTop(true);
+      } else {
+        readerWindow.setAlwaysOnTop(false);
+      }
+    }
+    return "pong";
+  })
 
   ipcMain.on("user-data", (event, arg) => {
     event.returnValue = dirPath;
@@ -471,155 +486,62 @@ const createMainWin = () => {
     }
   });
   ipcMain.handle("new-chat", (event, config) => {
-    if (mainWin && !chatView) {
-      chatView = new WebContentsView({ ...options, transparent: true })
-      mainWin.contentView.addChildView(chatView)
-      let { width, height } = mainWin.getContentBounds()
-      chatView.setBounds({ x: width - 80, y: height - 100, width: 80, height: 80 })
-      chatView.setBackgroundColor("#00000000");
-      chatView.webContents.loadURL(config.url)
-      chatView.webContents.insertCSS(`
-      html, body { 
-        overflow: hidden; 
-        background: transparent;
-      } 
-      #cw-widget-holder { 
-        width: calc(100% - 20px) !important; 
-        height: calc(100% - 20px) !important; 
-        margin: 0 !important; 
-        border-radius: 10px; 
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); 
-        overflow: hidden !important; 
-        right: 10px !important; 
-        top: 10px !important; 
-      }
-    `);
-
-      chatView.webContents.once('did-navigate', () => {
-        console.log("Main view logs this no problem....");
-        chatView.webContents.once('dom-ready', () => {
-          // Add the chat SDK script
-          chatView.webContents.executeJavaScript(`
-          // Define the API for renderer to communicate with main
-          window.electronAPI = {
-            mouseEnterChat: function() {
-              const { ipcRenderer } = require('electron');
-              ipcRenderer.send('chat-mouse-enter');
-            },
-            mouseLeaveChat: function() {
-              const { ipcRenderer } = require('electron');
-              ipcRenderer.send('chat-mouse-leave');
-            },
-          };
-          const script = document.createElement('script');
-          script.type = 'text/javascript';
-          script.text = \`
-            (function (d, t) {
-              var BASE_URL = "https://app.chatwoot.com";
-              var g = d.createElement(t),
-                s = d.getElementsByTagName(t)[0];
-              g.src = BASE_URL + "/packs/js/sdk.js";
-              g.defer = true;
-              g.async = true;
-              s.parentNode.insertBefore(g, s);
-              g.onload = function () {
-                window.chatwootSDK.run({
-                  websiteToken: "svaD5wxfU5UY1r5ZzpMtLqv2",
-                  baseUrl: BASE_URL,
-                });
-                window.addEventListener('chatwoot:ready', function () {
-                  window.$chatwoot.setLocale('${config.locale}');
-                  window.$chatwoot.setCustomAttributes({
-                    version: '${packageJson.version}',
-                    client: 'desktop',
-                  });
-                });
-                window.addEventListener('chatwoot:on-message', function(e) {
-                  window.electronAPI.mouseEnterChat(); 
-                });
-                window.addEventListener('chatwoot:on-close', function(e) {
-                  window.electronAPI.mouseLeaveChat(); 
-                });
-              };
-            })(document, "script");
-          \`; 
-          document.head.appendChild(script);
-
-          // Add mouse event handlers
-          document.body.addEventListener('mouseenter', function() {
-            window.electronAPI.mouseEnterChat();
-          });
-          document.addEventListener('mouseup', function() {
-            window.electronAPI.mouseLeaveChat();
-          });
-          
-          
-          
-
-          // Add a slight delay to catch any initial mouse position
-          setTimeout(() => {
-            const rect = document.body.getBoundingClientRect();
-            const mouseX = window.event ? window.event.clientX : 0;
-            const mouseY = window.event ? window.event.clientY : 0;
-            
-            if (mouseX >= rect.left && mouseX <= rect.right && 
-                mouseY >= rect.top && mouseY <= rect.bottom) {
-              window.electronAPI.mouseEnterChat();
-            }
-          }, 1000);
-          `);
-
-          event.returnvalue = true;
-        });
-
+    if (!chatWindow) {
+      chatWindow = new BrowserWindow({
+        ...options,
+        width: 450,
+        height: parseInt(store.get("windowHeight") || "660"),
+        x: parseInt(store.get("windowX")) + (parseInt(store.get("windowWidth") || "1050") - 450),
+        y: parseInt(store.get("windowY")),
+        frame: true,
+        hasShadow: true,
+        transparent: false,
       });
-      chatView.webContents.on('blur', () => {
-        console.log("leave");
-        if (!mainWin) return;
-        let { width, height } = mainWin.getContentBounds();
-
-        // Add a small delay to prevent flickering on quick mouse movements
-        setTimeout(() => {
-          chatView.setBounds({ x: width - 80, y: height - 100, width: 80, height: 80 });
-          chatView.webContents.executeJavaScript(`
-            window.$chatwoot && window.$chatwoot.toggle('close');
-          `);
-          isChatExpand = false;
-        }, 300);
+      chatWindow.loadURL(config.url);
+      //insert chatwoot script
+      const script = `
+        const script = document.createElement('script');
+        script.type = 'text/javascript';
+        script.text = \`
+          (function (d, t) {
+            var BASE_URL = "https://app.chatwoot.com";
+            var g = d.createElement(t),
+              s = d.getElementsByTagName(t)[0];
+            g.src = BASE_URL + "/packs/js/sdk.js";
+            g.defer = true;
+            g.async = true;
+            s.parentNode.insertBefore(g, s);
+            g.onload = function () {
+              window.chatwootSDK.run({
+                websiteToken: "svaD5wxfU5UY1r5ZzpMtLqv2",
+                baseUrl: BASE_URL,
+              });
+              window.addEventListener('chatwoot:ready', function () {
+                window.$chatwoot.setLocale('${config.locale}');
+                window.$chatwoot.setCustomAttributes({
+                  version: '${packageJson.version}',
+                  client: 'desktop',
+                });
+              });
+              window.addEventListener('chatwoot:on-message', function(e) {
+                window.electronAPI.mouseEnterChat(); 
+              });
+              window.addEventListener('chatwoot:on-close', function(e) {
+                window.electronAPI.mouseLeaveChat(); 
+              });
+            };
+          })(document, "script");
+        \`; 
+        document.head.appendChild(script);
+      `;
+      chatWindow.webContents.executeJavaScript(script);
+      chatWindow.on("close", (event) => {
+        chatWindow && chatWindow.destroy();
+        chatWindow = null;
       });
-      // Register IPC listeners for mouse events
-      ipcMain.on('chat-mouse-enter', () => {
-        if (!mainWin || isChatExpand) return;
-        let { width, height } = mainWin.getContentBounds();
-        chatView.setBounds({ x: width - 400, y: height - 520, width: 400, height: 500 });
-        chatView.webContents.executeJavaScript(`
-          window.$chatwoot && window.$chatwoot.toggle('open');
-        `);
-        isChatExpand = true;
-      });
-      ipcMain.on('chat-mouse-leave', () => {
-        if (!mainWin) return;
-        let { width, height } = mainWin.getContentBounds();
-
-        // Add a small delay to prevent flickering on quick mouse movements
-        setTimeout(() => {
-          chatView.setBounds({ x: width - 80, y: height - 100, width: 80, height: 80 });
-          chatView.webContents.executeJavaScript(`
-            window.$chatwoot && window.$chatwoot.toggle('close');
-          `);
-        }, 300);
-      });
-    }
-  });
-  ipcMain.handle("exit-chat", (event, config) => {
-    if (mainWin && chatView) {
-      // Remove the IPC listeners
-      ipcMain.removeAllListeners('chat-mouse-enter');
-      ipcMain.removeAllListeners('chat-mouse-leave');
-
-      mainWin.contentView.removeChildView(chatView);
-      chatView = null;
-      isChatExpand = false;
+    } else if (chatWindow && !chatWindow.isDestroyed()) {
+      chatWindow.show();
+      chatWindow.focus();
     }
   });
 

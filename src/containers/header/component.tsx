@@ -33,6 +33,7 @@ import {
   getChatLocale,
   getStorageLocation,
   removeChatBox,
+  WEBSITE_URL,
 } from "../../utils/common";
 import { driveList } from "../../constants/driveList";
 import SupportDialog from "../../components/dialogs/supportDialog";
@@ -154,10 +155,6 @@ class Header extends React.Component<HeaderProps, HeaderState> {
   ) {
     if (nextProps.isAuthed && nextProps.isAuthed !== this.props.isAuthed) {
       if (isElectron) {
-        window.require("electron").ipcRenderer.invoke("new-chat", {
-          url: "https://dl.koodoreader.com/chat.html",
-          locale: getChatLocale(),
-        });
       } else {
         addChatBox();
       }
@@ -177,10 +174,6 @@ class Header extends React.Component<HeaderProps, HeaderState> {
     }
     if (!nextProps.isAuthed && nextProps.isAuthed !== this.props.isAuthed) {
       if (isElectron) {
-        window.require("electron").ipcRenderer.invoke("exit-chat", {
-          url: "https://dl.koodoreader.com/chat.html",
-          locale: getChatLocale(),
-        });
       } else {
         removeChatBox();
       }
@@ -289,7 +282,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
         this.props.t(
           "In order to let you directly manage your data in Google Drive, we have deprecated the old Google Drive token. Please reauthorize Google Drive in the settings. Your new data will be stored in the root directory of your Google Drive, and you can manage it directly in the Google Drive web interface."
         ),
-        { duration: 10000 }
+        { duration: 4000 }
       );
       this.setState({ isSync: false });
       return false;
@@ -420,6 +413,8 @@ class Header extends React.Component<HeaderProps, HeaderState> {
     }, 1000);
     let res = await this.beforeSync();
     if (!res) {
+      this.setState({ isSync: false });
+      clearInterval(this.timer);
       return;
     }
     let compareResult = await this.getCompareResult();
@@ -483,6 +478,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       toast.error(this.props.t("Sync failed"), {
         id: "syncing",
       });
+      clearInterval(this.timer);
       return;
     }
   };
@@ -512,6 +508,31 @@ class Header extends React.Component<HeaderProps, HeaderState> {
         className="header"
         style={this.props.isCollapsed ? { marginLeft: "40px" } : {}}
       >
+        {isElectron && this.props.isAuthed && (
+          <div
+            className="header-chat-widget"
+            onClick={() => {
+              window.require("electron").ipcRenderer.invoke("new-chat", {
+                url:
+                  WEBSITE_URL +
+                  (ConfigService.getReaderConfig("lang").startsWith("zh")
+                    ? "/zh/faq"
+                    : "/en/faq"),
+                locale: getChatLocale(),
+              });
+            }}
+          >
+            <img
+              src={require("../../assets/images/chat-widget.png")}
+              alt="logo"
+              className="login-mobile-qr"
+              style={{
+                width: "100%",
+                height: "100%",
+              }}
+            />
+          </div>
+        )}
         <div
           className="header-search-container"
           style={this.props.isCollapsed ? { width: "369px" } : {}}
