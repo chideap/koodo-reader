@@ -1,7 +1,7 @@
 {
   "name": "koodo-reader",
   "main": "main.js",
-  "version": "2.0.3",
+  "version": "2.0.6",
   "description": "Koodo Reader is a cross-platform ebook reader",
   "author": {
     "name": "App by Troye",
@@ -50,6 +50,7 @@
     "react-sortablejs": "^6.1.4",
     "react-tooltip": "^5.28.0",
     "sortablejs": "^1.15.6",
+    "sse.js": "^2.6.0",
     "ssh2-sftp-client": "^11.0.0",
     "underscore": "^1.13.7",
     "uuid": "^11.0.5",

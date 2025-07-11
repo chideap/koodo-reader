@@ -17,7 +17,7 @@ import {
 } from "../../../assets/lib/kookit-extra-browser.min";
 import * as Kookit from "../../../assets/lib/kookit.min";
 import { isElectron } from "react-device-detect";
-import { getStorageLocation } from "../../../utils/common";
+import { getPdfPassword, getStorageLocation } from "../../../utils/common";
 class ActionDialog extends React.Component<MoreActionProps, MoreActionState> {
   constructor(props: MoreActionProps) {
     super(props);
@@ -152,18 +152,23 @@ class ActionDialog extends React.Component<MoreActionProps, MoreActionState> {
                 true,
                 this.props.currentBook.path
               ).then(async (result: any) => {
-                let rendition = BookHelper.getRendtion(
+                let rendition = BookHelper.getRendition(
                   result,
-                  this.props.currentBook.format,
-                  "",
-                  this.props.currentBook.charset,
-                  ConfigService.getReaderConfig("isSliding") === "yes"
-                    ? "sliding"
-                    : "",
-                  ConfigService.getReaderConfig("convertChinese"),
-                  "",
-                  "no",
-                  "no",
+                  {
+                    format: this.props.currentBook.format,
+                    readerMode: "",
+                    charset: this.props.currentBook.charset,
+                    animation:
+                      ConfigService.getReaderConfig("isSliding") === "yes"
+                        ? "sliding"
+                        : "",
+                    convertChinese:
+                      ConfigService.getReaderConfig("convertChinese"),
+                    parserRegex: "",
+                    isDarkMode: "no",
+                    isMobile: "no",
+                    password: getPdfPassword(this.props.currentBook),
+                  },
                   Kookit
                 );
                 let cache = await rendition.preCache(result);

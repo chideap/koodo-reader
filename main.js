@@ -7,7 +7,7 @@ const {
   dialog,
   powerSaveBlocker,
   nativeTheme,
-  protocol
+  protocol,
 } = require("electron");
 const path = require("path");
 const isDev = require("electron-is-dev");
@@ -38,8 +38,10 @@ store.set(
   "appPlatform", os.platform() + " " + os.release(),
 );
 let options = {
-  width: 1050,
-  height: 660,
+  width: parseInt(store.get("mainWinWidth") || 1050),
+  height: parseInt(store.get("mainWinHeight") || 660),
+  x: parseInt(store.get("mainWinX")),
+  y: parseInt(store.get("mainWinY")),
   backgroundColor: '#fff',
   webPreferences: {
     webSecurity: false,
@@ -154,6 +156,17 @@ const createMainWin = () => {
   mainWin.loadURL(urlLocation);
 
   mainWin.on("close", () => {
+    if (!mainWin.isDestroyed()) {
+      let bounds = mainWin.getBounds();
+      if (bounds.width > 0 && bounds.height > 0) {
+        store.set({
+          mainWinWidth: bounds.width,
+          mainWinHeight: bounds.height,
+          mainWinX: bounds.x,
+          mainWinY: bounds.y,
+        });
+      }
+    }
     mainWin = null;
   });
   mainWin.on("resize", () => {
@@ -357,6 +370,14 @@ const createMainWin = () => {
     return "success"
 
   });
+  ipcMain.handle("reset-main-position", async (event) => {
+    store.delete("mainWinX");
+    store.delete("mainWinY");
+    app.relaunch()
+    app.exit()
+    return "success"
+
+  });
 
   ipcMain.handle("select-file", async (event, config) => {
     const result = await dialog.showOpenDialog({
@@ -445,6 +466,12 @@ const createMainWin = () => {
     }
     return "pong";
   })
+  ipcMain.handle("toggle-auto-launch", async (event, config) => {
+    app.setLoginItemSettings({
+      openAtLogin: config.isAutoLaunch === "yes"
+    })
+    return "pong";
+  })
 
   ipcMain.on("user-data", (event, arg) => {
     event.returnValue = dirPath;
@@ -486,13 +513,14 @@ const createMainWin = () => {
     }
   });
   ipcMain.handle("new-chat", (event, config) => {
-    if (!chatWindow) {
+    if (!chatWindow && mainWin) {
+      let bounds = mainWin.getBounds();
       chatWindow = new BrowserWindow({
         ...options,
         width: 450,
-        height: parseInt(store.get("windowHeight") || "660"),
-        x: parseInt(store.get("windowX")) + (parseInt(store.get("windowWidth") || "1050") - 450),
-        y: parseInt(store.get("windowY")),
+        height: bounds.height,
+        x: bounds.x + (bounds.width - 450),
+        y: bounds.y,
         frame: true,
         hasShadow: true,
         transparent: false,
@@ -715,7 +743,6 @@ app.on('open-url', (event, url) => {
   event.preventDefault();
   handleCallback(url);
 });
-
 const handleCallback = (url) => {
   try {
     // 检查 URL 是否有效

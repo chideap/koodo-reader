@@ -30,7 +30,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
       isOpenRightPanel: this.props.isSettingLocked,
       totalDuration: 0,
       currentDuration: 0,
-      scale: ConfigService.getReaderConfig("scale"),
+      scale: ConfigService.getReaderConfig("scale") || "1",
       isTouch: ConfigService.getReaderConfig("isTouch") === "yes",
       isPreventTrigger:
         ConfigService.getReaderConfig("isPreventTrigger") === "yes",
@@ -272,6 +272,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
                           100
                         : 100
                     }
+                    value={parseFloat(this.state.scale) * 100}
                     type="number"
                     onInput={(event: any) => {
                       let fieldVal = event.target.value;
@@ -298,7 +299,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
                   className="input-progress"
                   value={this.state.scale}
                   type="range"
-                  max={1.5}
+                  max={4}
                   min={0.5}
                   step={0.01}
                   onInput={(event: any) => {
@@ -514,6 +515,8 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
                   marginLeft:
                     this.props.isNavLocked && !this.props.isSettingLocked
                       ? 150
+                      : !this.props.isNavLocked && this.props.isSettingLocked
+                      ? -150
                       : 0,
                 }
               : {
@@ -521,6 +524,8 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
                   marginLeft:
                     this.props.isNavLocked && !this.props.isSettingLocked
                       ? 150
+                      : !this.props.isNavLocked && this.props.isSettingLocked
+                      ? -150
                       : 0,
                 }
           }
@@ -538,6 +543,8 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
                   marginLeft:
                     this.props.isNavLocked && !this.props.isSettingLocked
                       ? 150
+                      : !this.props.isNavLocked && this.props.isSettingLocked
+                      ? -150
                       : 0,
                 }
               : {
@@ -545,6 +552,8 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
                   marginLeft:
                     this.props.isNavLocked && !this.props.isSettingLocked
                       ? 150
+                      : !this.props.isNavLocked && this.props.isSettingLocked
+                      ? -150
                       : 0,
                 }
           }

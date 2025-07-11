@@ -13,7 +13,11 @@ import { getIframeDoc } from "../../utils/reader/docUtil";
 import PopupBox from "../../components/popups/popupBox";
 import Note from "../../models/Note";
 import PageWidget from "../pageWidget";
-import { getPageWidth, scrollContents } from "../../utils/common";
+import {
+  getPageWidth,
+  getPdfPassword,
+  scrollContents,
+} from "../../utils/common";
 import _ from "underscore";
 import {
   BookHelper,
@@ -34,7 +38,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
       rect: null,
       key: "",
       isFirst: true,
-      scale: ConfigService.getReaderConfig("scale") || 1,
+      scale: ConfigService.getReaderConfig("scale") || "1",
       chapterTitle:
         ConfigService.getObjectConfig(
           this.props.currentBook.key,
@@ -166,18 +170,28 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
         }
       }
 
-      let rendition = BookHelper.getRendtion(
+      let rendition = BookHelper.getRendition(
         result,
-        isCacheExsit ? "CACHE" : format,
-        this.props.readerMode,
-        this.props.currentBook.charset,
-        ConfigService.getReaderConfig("isSliding") === "yes" ? "sliding" : "",
-        ConfigService.getReaderConfig("convertChinese"),
-        "",
-        ConfigService.getReaderConfig("backgroundColor") === "rgba(44,47,49,1)"
-          ? "yes"
-          : "no",
-        "no",
+        {
+          format: isCacheExsit ? "CACHE" : format,
+          readerMode: this.props.readerMode,
+          charset: this.props.currentBook.charset,
+          animation:
+            ConfigService.getReaderConfig("isSliding") === "yes"
+              ? "sliding"
+              : "",
+          convertChinese: ConfigService.getReaderConfig("convertChinese"),
+          parserRegex: "",
+          isDarkMode:
+            ConfigService.getReaderConfig("backgroundColor") ===
+            "rgba(44,47,49,1)"
+              ? "yes"
+              : "no",
+          isMobile: "no",
+          isStartFromEven: ConfigService.getReaderConfig("isStartFromEven"),
+          password: getPdfPassword(this.props.currentBook),
+          scale: parseFloat(this.state.scale),
+        },
         Kookit
       );
       if (this.props.currentBook.format === "TXT") {
@@ -221,7 +235,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
     this.setState({ rendition });
 
     StyleUtil.addDefaultCss();
-    rendition.tsTransform();
+    rendition.tranformText();
     // rendition.setStyle(StyleUtil.getCustomCss());
     let bookLocation: {
       text: string;
@@ -313,7 +327,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
       });
       scrollContents(chapter, bookLocation.chapterHref);
       StyleUtil.addDefaultCss();
-      rendition.tsTransform();
+      rendition.tranformText();
       this.handleBindGesture();
       await this.handleHighlight(rendition);
       lock = true;

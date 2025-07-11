@@ -55,7 +55,6 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       isDataChange: false,
       isHidePro: false,
       isSync: false,
-      isAutoSync: ConfigService.getReaderConfig("isDisableAutoSync") !== "yes",
     };
   }
   async componentDidMount() {
@@ -138,7 +137,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
         if (ConfigService.getItem("isFinshReading") === "yes") {
           ConfigService.setItem("isFinshReading", "no");
           if (
-            this.state.isAutoSync &&
+            ConfigService.getReaderConfig("isDisableAutoSync") !== "yes" &&
             ConfigService.getItem("defaultSyncOption")
           ) {
             await this.props.handleFetchUserInfo();
@@ -167,7 +166,10 @@ class Header extends React.Component<HeaderProps, HeaderState> {
         }
       }
       await this.props.handleFetchUserInfo();
-      if (this.state.isAutoSync && ConfigService.getItem("defaultSyncOption")) {
+      if (
+        ConfigService.getReaderConfig("isDisableAutoSync") !== "yes" &&
+        ConfigService.getItem("defaultSyncOption")
+      ) {
         this.setState({ isSync: true });
         await this.handleCloudSync();
       }
@@ -373,6 +375,14 @@ class Header extends React.Component<HeaderProps, HeaderState> {
                 stats.completed +
                 "/" +
                 stats.total +
+                ")" +
+                " (" +
+                this.props.t(
+                  driveList.find(
+                    (item) =>
+                      item.value === ConfigService.getItem("defaultSyncOption")
+                  )?.label || ""
+                ) +
                 ")",
               {
                 id: "syncing",
@@ -403,6 +413,14 @@ class Header extends React.Component<HeaderProps, HeaderState> {
               stats.completed +
               "/" +
               stats.total +
+              ")" +
+              " (" +
+              this.props.t(
+                driveList.find(
+                  (item) =>
+                    item.value === ConfigService.getItem("defaultSyncOption")
+                )?.label || ""
+              ) +
               ")",
             {
               id: "syncing",
@@ -411,15 +429,26 @@ class Header extends React.Component<HeaderProps, HeaderState> {
         }
       }
     }, 1000);
-    let res = await this.beforeSync();
-    if (!res) {
-      this.setState({ isSync: false });
+    try {
+      let res = await this.beforeSync();
+      if (!res) {
+        this.setState({ isSync: false });
+        clearInterval(this.timer);
+        return;
+      }
+      let compareResult = await this.getCompareResult();
+      await this.handleSync(compareResult);
       clearInterval(this.timer);
+      this.setState({ isSync: false });
+    } catch (error) {
+      console.error(error);
+      toast.error(this.props.t("Sync failed"), {
+        id: "syncing",
+      });
+      clearInterval(this.timer);
+      this.setState({ isSync: false });
       return;
     }
-    let compareResult = await this.getCompareResult();
-    await this.handleSync(compareResult);
-    this.setState({ isSync: false });
   };
   handleSuccess = async () => {
     this.props.handleFetchBooks();

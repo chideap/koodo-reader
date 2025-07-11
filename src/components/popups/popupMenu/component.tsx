@@ -54,12 +54,23 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
     let posY = rect.bottom - this.props.rendition.getPageSize().scrollTop;
     let posX = rect.left + rect.width / 2;
     // fix popup position when crossing pages
-    if (rect.width > this.props.rendition.getPageSize().sectionWidth) {
+    if (
+      rect.width > this.props.rendition.getPageSize().sectionWidth &&
+      rect.left < 0
+    ) {
       posX = rect.left + rect.width;
     }
-    if (this.props.rendition.getPageSize().height - rect.height < 188) {
+    if (
+      this.props.rendition.getPageSize().height - rect.height < 188 &&
+      this.props.rendition.getPageSize().height - rect.height > 0
+    ) {
       this.props.handleChangeDirection(true);
       posY = rect.top + 16 + this.props.rendition.getPageSize().top;
+    } else if (
+      rect.height - this.props.rendition.getPageSize().height > 0 &&
+      this.props.readerMode === "scroll"
+    ) {
+      posY = 40;
     } else if (
       posY <
       this.props.rendition.getPageSize().height -

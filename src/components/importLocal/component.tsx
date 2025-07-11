@@ -18,6 +18,7 @@ import CoverUtil from "../../utils/file/coverUtil";
 import {
   calculateFileMD5,
   fetchFileFromPath,
+  getPdfPassword,
   supportedFormats,
 } from "../../utils/common";
 import DatabaseService from "../../utils/storage/databaseService";
@@ -247,18 +248,23 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
           reader.onload = async (event) => {
             const file_content = (event.target as any).result;
             try {
-              let rendition = BookHelper.getRendtion(
+              let rendition = BookHelper.getRendition(
                 file_content,
-                extension.toUpperCase(),
-                "",
-                "",
-                ConfigService.getReaderConfig("isSliding") === "yes"
-                  ? "sliding"
-                  : "",
-                ConfigService.getReaderConfig("convertChinese"),
-                "",
-                "no",
-                "no",
+                {
+                  format: extension.toUpperCase(),
+                  readerMode: "",
+                  charset: "",
+                  animation:
+                    ConfigService.getReaderConfig("isSliding") === "yes"
+                      ? "sliding"
+                      : "",
+                  convertChinese:
+                    ConfigService.getReaderConfig("convertChinese"),
+                  parserRegex: "",
+                  isDarkMode: "no",
+                  isMobile: "no",
+                  password: "",
+                },
                 Kookit
               );
               result = await BookHelper.generateBook(
