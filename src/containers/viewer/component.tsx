@@ -17,6 +17,7 @@ import {
   getPageWidth,
   getPdfPassword,
   scrollContents,
+  showDownloadProgress,
 } from "../../utils/common";
 import _ from "underscore";
 import {
@@ -152,7 +153,14 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
     ).then(async (result: any) => {
       if (!result) {
         if (this.props.defaultSyncOption) {
+          let timer = showDownloadProgress(
+            this.props.defaultSyncOption,
+            "cloud",
+            this.props.currentBook.size
+          );
           let result = await BookUtil.downloadBook(key, format.toLowerCase());
+          clearInterval(timer);
+          toast.dismiss("offline-book");
           if (result) {
             toast.success(this.props.t("Download successful"));
           } else {
@@ -191,6 +199,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
           isStartFromEven: ConfigService.getReaderConfig("isStartFromEven"),
           password: getPdfPassword(this.props.currentBook),
           scale: parseFloat(this.state.scale),
+          isConvertPDF: ConfigService.getReaderConfig("isConvertPDF"),
         },
         Kookit
       );
@@ -268,7 +277,10 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
         })
       );
     }
-    if (this.props.currentBook.format === "TXT") {
+    if (
+      this.props.currentBook.format === "TXT" &&
+      rendition.format !== "CACHE"
+    ) {
       setTimeout(async () => {
         await rendition.refreshContent();
         let chapters = rendition.getChapter();

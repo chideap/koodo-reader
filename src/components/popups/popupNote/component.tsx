@@ -11,7 +11,7 @@ import { getIframeDoc } from "../../../utils/reader/docUtil";
 import { ConfigService } from "../../../assets/lib/kookit-extra-browser.min";
 import DatabaseService from "../../../utils/storage/databaseService";
 import ColorOption from "../../colorOption";
-
+import copy from "copy-text-to-clipboard";
 class PopupNote extends React.Component<PopupNoteProps, PopupNoteState> {
   constructor(props: PopupNoteProps) {
     super(props);
@@ -99,7 +99,10 @@ class PopupNote extends React.Component<PopupNoteProps, PopupNoteState> {
           {}
         )
       );
-      if (this.props.currentBook.format === "PDF") {
+      if (
+        this.props.currentBook.format === "PDF" &&
+        ConfigService.getReaderConfig("isConvertPDF") !== "yes"
+      ) {
         let bookLocation = this.props.htmlBook.rendition.getPositionByChapter(
           this.props.chapterDocIndex
         );
@@ -210,6 +213,15 @@ class PopupNote extends React.Component<PopupNoteProps, PopupNoteState> {
           </div>
           <ColorOption {...PopupProps} />
           <div className="note-button-container">
+            <span
+              className="book-manage-title"
+              onClick={() => {
+                copy(this.state.text);
+                toast.success(this.props.t("Copying successful"));
+              }}
+            >
+              <Trans>Copy quotes</Trans>
+            </span>
             <span
               className="book-manage-title"
               onClick={() => {
