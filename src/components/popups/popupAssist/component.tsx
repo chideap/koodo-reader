@@ -4,10 +4,8 @@ import { PopupAssistProps, PopupAssistState } from "./interface";
 import { ConfigService } from "../../../assets/lib/kookit-extra-browser.min";
 import Parser from "html-react-parser";
 import DOMPurify from "dompurify";
-import axios from "axios";
 import { Trans } from "react-i18next";
 import {
-  getDefaultTransTarget,
   handleContextMenu,
   openExternalUrl,
   WEBSITE_URL,
@@ -18,7 +16,6 @@ import { checkPlugin } from "../../../utils/common";
 import { getAnswerStream } from "../../../utils/request/reader";
 import { marked } from "marked";
 import { sampleQuestion } from "../../../constants/settingList";
-declare var window: any;
 class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
   private chatBoxRef: React.RefObject<HTMLDivElement>;
 
@@ -111,7 +108,7 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
             this.scrollToBottom();
           }
         );
-        if (res.data && res.data.done) {
+        if (res.data && res.done) {
           if (this.state.mode === "ask") {
             this.setState({
               askHistory: [
@@ -405,8 +402,8 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
               style={{
                 marginTop: "60px",
                 width: "calc(100% + 20px)",
-                height: "225px",
-                paddingBottom: "60px",
+                height: "210px",
+                paddingBottom: "0px",
                 paddingLeft: "0px",
                 paddingRight: "20px",
               }}
@@ -462,7 +459,7 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
               style={{
                 marginLeft: "-25px",
                 marginRight: "-25px",
-                marginBottom: "-25px",
+                marginBottom: "-20px",
                 padding: "0px 25px",
               }}
             >
@@ -477,7 +474,7 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
                           this.handleNewQuestion(item.question);
                         }}
                       >
-                        {this.props.t(item.question)}
+                        {item.emoji + " " + this.props.t(item.question)}
                       </div>
                     );
                   })}

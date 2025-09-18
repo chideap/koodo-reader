@@ -55,7 +55,6 @@ export type stateType = {
     settingMode: string;
     settingDrive: string;
     isDetailDialog: boolean;
-    isOpenFeedbackDialog: boolean;
     bookSortCode: { sort: number; order: number };
     noteSortCode: { sort: number; order: number };
   };
@@ -97,6 +96,7 @@ export type stateType = {
     readerMode: string;
     isNavLocked: boolean;
     isSettingLocked: boolean;
+    isConvertOpen: boolean;
     noteKey: string;
     currentChapter: string;
     currentChapterIndex: number;

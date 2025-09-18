@@ -58,16 +58,13 @@
 
 ## 使用方法
 
-### 桌面端：
-
-- 稳定版 (推荐下载)：[官网](https://koodoreader.com/zh)
-- 开发版：[GitHub Release](https://github.com/koodo-reader/koodo-reader/releases/latest) （包含新功能和 bug 修复，但也可能引入更多未知 bug）
+### 桌面端：[下载](https://koodoreader.com/zh/download)
 
 ### 网页版：[前往](https://web.koodoreader.com)
 
-### 安卓版 (需要配合开发版使用)：[前往](https://koodoreader.com/zh/download)
+### 安卓版：[下载](https://koodoreader.com/zh/download)
 
-### iOS 版 (需要配合开发版使用)：[前往](https://koodoreader.com/zh/download)
+### iOS 版：[下载](https://koodoreader.com/zh/download)
 
 ### 使用 Scoop 安装：
 
@@ -83,6 +80,9 @@ brew install --cask koodo-reader
 ```
 
 ### 使用 Docker 安装：
+
+> [!NOTE]
+> Docker 版默认将数据保存在浏览器缓存中。为了您的数据安全，请通过 HTTPS 部署和访问，然后将数据保存到您的本地文件夹。或者您也可以启用数据源功能，将数据同步到指定的服务器路径
 
 如果您只需要部署网页版，直接使用下面的命令即可
 

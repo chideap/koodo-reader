@@ -23,6 +23,7 @@ let readerWindow;
 let urlWindow;
 let mainView;
 let chatWindow;
+let googlePickerView;
 let dbConnection = {};
 let syncUtilCache = {};
 let pickerUtilCache = {};
@@ -145,6 +146,9 @@ const createMainWin = () => {
   if (store.get("isAlwaysOnTop") === "yes") {
     mainWin.setAlwaysOnTop(true);
   }
+  if (store.get("isAutoMaximizeWin") === "yes") {
+    mainWin.maximize();
+  }
 
   if (!isDev) {
     Menu.setApplicationMenu(null);
@@ -156,14 +160,14 @@ const createMainWin = () => {
   mainWin.loadURL(urlLocation);
 
   mainWin.on("close", () => {
-    if (!mainWin.isDestroyed()) {
+    if (mainWin && !mainWin.isDestroyed()) {
       let bounds = mainWin.getBounds();
       if (bounds.width > 0 && bounds.height > 0) {
         store.set({
           mainWinWidth: bounds.width,
           mainWinHeight: bounds.height,
-          mainWinX: bounds.x,
-          mainWinY: bounds.y,
+          mainWinX: mainWin.isMaximized() ? 0 : bounds.x,
+          mainWinY: mainWin.isMaximized() ? 0 : bounds.y,
         });
       }
     }
@@ -188,7 +192,69 @@ const createMainWin = () => {
       mainView.setBounds({ x: 0, y: 0, width: width, height: height })
     }
   });
+  ipcMain.handle('update-win-app', (event, config) => {
+    let fileName = `koodo-reader-installer.exe`;
+    let supportedArchs = ['x64', 'ia32', 'arm64'];
+    //get system arch
+    let arch = os.arch();
+    if (!supportedArchs.includes(arch)) {
+      return;
+    }
 
+    let url = `https://dl.koodoreader.com/v${config.version}/Koodo-Reader-${config.version}-${arch}.exe`;
+    const https = require("https");
+    const { spawn } = require("child_process");
+    const file = fs.createWriteStream(path.join(app.getPath('temp'), fileName));
+    https.get(url, (res) => {
+      const totalSize = parseInt(res.headers['content-length'], 10);
+      let downloadedSize = 0;
+      res.on('data', (chunk) => {
+        downloadedSize += chunk.length;
+        const progress = ((downloadedSize / totalSize) * 100).toFixed(2);
+        const downloadedMB = (downloadedSize / 1024 / 1024).toFixed(2);
+        const totalMB = (totalSize / 1024 / 1024).toFixed(2);
+        mainWin.webContents.send('download-app-progress', { progress, downloadedMB, totalMB });
+      });
+
+      res.pipe(file);
+      file.on('finish', () => {
+        console.log('\n下载完成！');
+        file.close();
+
+
+        let updateExePath = path.join(app.getPath('temp'), fileName);
+        if (!fs.existsSync(updateExePath)) {
+          console.error('更新包不存在:', updateExePath);
+          return;
+        }
+        // 验证文件可执行性
+        try {
+          fs.accessSync(updateExePath, fs.constants.X_OK);
+          console.info('更新包可执行性验证通过');
+        } catch (err) {
+          console.error('更新包不可执行:', err.message);
+          return;
+        }
+        try {
+          // 使用 spawn 执行非静默安装
+          const child = spawn(updateExePath, [], {
+            stdio: ['ignore', 'pipe', 'pipe'], // 捕获 stdout 和 stderr 以便调试
+            detached: true,                    // 独立进程
+            shell: true,                      // 确保 UAC 提示
+            windowsHide: false                // 确保窗口可见
+          });
+
+
+          setTimeout(() => {
+            app.quit();
+          }, 1000);
+          child.unref();
+        } catch (err) {
+          console.error(`spawn 执行异常: ${err.message}`);
+        }
+      });
+    });
+  });
   ipcMain.handle("open-book", (event, config) => {
     let { url, isMergeWord, isAutoFullscreen, isPreventSleep } = config;
     options.webPreferences.nodeIntegrationInSubFrames = true;
@@ -230,14 +296,14 @@ const createMainWin = () => {
       readerWindow.setAlwaysOnTop(true);
     }
     readerWindow.on("close", (event) => {
-      if (!readerWindow.isDestroyed()) {
+      if (readerWindow && !readerWindow.isDestroyed()) {
         let bounds = readerWindow.getBounds();
         if (bounds.width > 0 && bounds.height > 0) {
           store.set({
             windowWidth: bounds.width,
             windowHeight: bounds.height,
-            windowX: bounds.x,
-            windowY: bounds.y,
+            windowX: readerWindow.isMaximized() ? 0 : bounds.x,
+            windowY: readerWindow.isMaximized() ? 0 : bounds.y,
           });
         }
       }
@@ -296,9 +362,15 @@ const createMainWin = () => {
     return result;
   });
   ipcMain.handle("cloud-delete", async (event, config) => {
-    let syncUtil = await getSyncUtil(config, config.isUseCache);
-    let result = await syncUtil.deleteFile(config.fileName, config.type);
-    return result;
+    try {
+      let syncUtil = await getSyncUtil(config, config.isUseCache);
+      let result = await syncUtil.deleteFile(config.fileName, config.type);
+      return result;
+    } catch (error) {
+      console.error("Error deleting file:", error);
+    }
+    return false;
+
   });
 
   ipcMain.handle("cloud-list", async (event, config) => {
@@ -476,10 +548,39 @@ const createMainWin = () => {
     }
     return "pong";
   })
+  ipcMain.handle("set-auto-maximize", async (event, config) => {
+    store.set("isAutoMaximizeWin", config.isAutoMaximizeWin);
+    if (mainWin && !mainWin.isDestroyed()) {
+      if (config.isAutoMaximizeWin === "yes") {
+        mainWin.maximize();
+      } else {
+        mainWin.unmaximize();
+      }
+
+    }
+    if (readerWindow && !readerWindow.isDestroyed()) {
+      if (config.isAlwaysOnTop === "yes") {
+        readerWindow.setAlwaysOnTop(true);
+      } else {
+        readerWindow.setAlwaysOnTop(false);
+      }
+    }
+    return "pong";
+  })
   ipcMain.handle("toggle-auto-launch", async (event, config) => {
     app.setLoginItemSettings({
       openAtLogin: config.isAutoLaunch === "yes"
     })
+    return "pong";
+  })
+  ipcMain.handle("open-explorer-folder", async (event, config) => {
+    const { shell } = require("electron");
+    if (config.isFolder) {
+      shell.openPath(config.path);
+    } else {
+      shell.showItemInFolder(config.path);
+    }
+
     return "pong";
   })
 
@@ -511,17 +612,7 @@ const createMainWin = () => {
       mainWin.reload();
     }
   });
-  ipcMain.handle("focus-on-main", (event, arg) => {
-    if (mainWin) {
-      if (!mainWin.isVisible()) mainWin.show();
-      mainWin.focus();
-    }
-  });
-  ipcMain.handle("create-new-main", (event, arg) => {
-    if (!mainWin) {
-      createMainWin();
-    }
-  });
+
   ipcMain.handle("new-chat", (event, config) => {
     if (!chatWindow && mainWin) {
       let bounds = mainWin.getBounds();
@@ -538,9 +629,9 @@ const createMainWin = () => {
       chatWindow.loadURL(config.url);
       //insert chatwoot script
       const script = `
-        const script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.text = \`
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.text = \`
           (function (d, t) {
             var BASE_URL = "https://app.chatwoot.com";
             var g = d.createElement(t),
@@ -550,23 +641,20 @@ const createMainWin = () => {
             g.async = true;
             s.parentNode.insertBefore(g, s);
             g.onload = function () {
-              window.chatwootSDK.run({
-                websiteToken: "svaD5wxfU5UY1r5ZzpMtLqv2",
-                baseUrl: BASE_URL,
-              });
-              window.addEventListener('chatwoot:ready', function () {
-                window.$chatwoot.setLocale('${config.locale}');
-                window.$chatwoot.setCustomAttributes({
-                  version: '${packageJson.version}',
-                  client: 'desktop',
+              setTimeout(() => {
+                window.chatwootSDK.run({
+                  websiteToken: "svaD5wxfU5UY1r5ZzpMtLqv2",
+                  baseUrl: BASE_URL,
                 });
-              });
-              window.addEventListener('chatwoot:on-message', function(e) {
-                window.electronAPI.mouseEnterChat(); 
-              });
-              window.addEventListener('chatwoot:on-close', function(e) {
-                window.electronAPI.mouseLeaveChat(); 
-              });
+                window.addEventListener('chatwoot:ready', function () {
+                  window.$chatwoot.setLocale('${config.locale}');
+                  window.$chatwoot.setCustomAttributes({
+                    version: '${packageJson.version}',
+                    client: 'desktop',
+                  });
+                });
+              }, 1000);
+              
             };
           })(document, "script");
         \`; 
@@ -583,7 +671,28 @@ const createMainWin = () => {
     }
   });
 
+  ipcMain.handle("google-picker", (event, config) => {
+    if (!googlePickerView && mainWin) {
+      googlePickerView = new WebContentsView({ ...options, transparent: true })
+      mainWin.contentView.addChildView(googlePickerView)
+      let { width, height } = mainWin.getContentBounds()
+      googlePickerView.setBounds({ x: 0, y: 0, width, height })
+      googlePickerView.setBackgroundColor("#00000000");
+      googlePickerView.webContents.loadURL(config.url)
+    }
+  });
+  ipcMain.on('picker-action', (event, config) => {
+    console.log("Picker finished with data:", config);
+    //将数据传递给主窗口
 
+    if (mainWin && !mainWin.isDestroyed() && config.action === 'picked') {
+      mainWin.webContents.send('picker-finished', config);
+    }
+    if (googlePickerView && (config.action === 'cancel' || config.action === 'picked')) {
+      mainWin.contentView.removeChildView(googlePickerView);
+      googlePickerView = null;
+    }
+  });
   ipcMain.handle("new-tab", (event, config) => {
     if (mainWin) {
       mainView = new WebContentsView(options)
@@ -674,8 +783,8 @@ const createMainWin = () => {
             store.set({
               windowWidth: bounds.width,
               windowHeight: bounds.height,
-              windowX: bounds.x,
-              windowY: bounds.y,
+              windowX: readerWindow.isMaximized() ? 0 : bounds.x,
+              windowY: readerWindow.isMaximized() ? 0 : bounds.y,
             });
           }
         }
@@ -728,6 +837,7 @@ const createMainWin = () => {
     filePath = null;
   });
 };
+
 
 app.on("ready", () => {
   createMainWin();

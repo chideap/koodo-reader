@@ -75,7 +75,8 @@ class ProgressPanel extends React.Component<
       return <div className="progress-panel">Loading</div>;
     }
     let readerMode =
-      this.props.currentBook.format === "PDF" ||
+      (this.props.currentBook.format === "PDF" &&
+        ConfigService.getReaderConfig("isConvertPDF") !== "yes") ||
       this.props.currentBook.format.startsWith("CB")
         ? ConfigService.getReaderConfig("pdfReaderMode") || "scroll"
         : ConfigService.getReaderConfig("readerMode") || "double";
@@ -184,7 +185,7 @@ class ProgressPanel extends React.Component<
           </div>
           <input
             className="input-progress"
-            defaultValue={Math.round(this.props.percentage * 100)}
+            defaultValue={(this.props.percentage * 100).toFixed(2) || 0}
             type="range"
             max="100"
             min="0"

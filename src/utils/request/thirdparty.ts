@@ -20,21 +20,59 @@ export const resetThirdpartyRequest = () => {
 };
 export const onSyncCallback = async (service: string, authCode: string) => {
   toast.loading(i18n.t("Adding"), { id: "adding-sync-id" });
+
   let thirdpartyRequest = await getThirdpartyRequest();
 
   let syncUtil = new SyncUtil(service, {}, thirdpartyRequest);
-  let refreshToken = await syncUtil.authToken(authCode);
-  if (!refreshToken) {
+  let timer = setTimeout(() => {
+    if (
+      ConfigService.getItem("serverRegion") !== "china" &&
+      navigator.language === "zh-CN"
+    ) {
+      toast.error(
+        i18n.t(
+          "Request timed out, You may change the server region to China to solve the connection issue in mainland China. Go to Settings > Account"
+        ),
+        { id: "adding-sync-error", duration: 6000 }
+      );
+      return;
+    }
+  }, 6000);
+  let result = await syncUtil.authToken(authCode);
+  clearTimeout(timer);
+  if (!result.refresh_token) {
     toast.error(i18n.t("Authorization failed"), { id: "adding-sync-id" });
     return;
   }
+  let region = "0";
+  if (service === "pcloud" && authCode.indexOf("$") > -1) {
+    // pCloud uses authCode with region info
+    let parts = authCode.split("$");
+    region = parts[1];
+  }
   // FOR PCLOUD, THE REFRESH TOKEN IS THE ACCESS TOKEN, ACCESS TOKEN NEVER EXPIRES
-  let res = await encryptToken(service, {
-    refresh_token: refreshToken,
-    auth_date: new Date().getTime(),
-    service: service,
-    version: 1,
-  });
+  let res = await encryptToken(
+    service,
+    service === "yiyiwu" || service === "dubox"
+      ? {
+          refresh_token: result.refresh_token,
+          access_token: result.access_token || "",
+          expires_at:
+            new Date().getTime() +
+            (service === "yiyiwu" ? 30 * 60 * 1000 : 2592000 * 1000),
+          region,
+          auth_date: new Date().getTime(),
+          service: service,
+          version: 1,
+        }
+      : {
+          refresh_token: result.refresh_token,
+          region,
+          auth_date: new Date().getTime(),
+          service: service,
+          version: 1,
+        }
+  );
   if (res.code === 200) {
     ConfigService.setListConfig(service, "dataSourceList");
     toast.success(i18n.t("Binding successful"), { id: "adding-sync-id" });
@@ -49,10 +87,24 @@ export const encryptToken = async (service: string, config: any) => {
     return { code: 200, msg: "success", data: syncToken };
   }
   let thirdpartyRequest = await getThirdpartyRequest();
-
+  let timer = setTimeout(() => {
+    if (
+      ConfigService.getItem("serverRegion") !== "china" &&
+      navigator.language === "zh-CN"
+    ) {
+      toast.error(
+        i18n.t(
+          "Request timed out, You may change the server region to China to solve the connection issue in mainland China. Go to Settings > Account"
+        ),
+        { id: "adding-sync-error", duration: 6000 }
+      );
+      return;
+    }
+  }, 6000);
   let response = await thirdpartyRequest.encryptToken({
     token: syncToken,
   });
+  clearTimeout(timer);
   if (response.code === 200) {
     await TokenService.setToken(
       service + "_token",
@@ -83,7 +135,22 @@ export const decryptToken = async (service: string) => {
     };
   }
   let thirdpartyRequest = await getThirdpartyRequest();
+  let timer = setTimeout(() => {
+    if (
+      ConfigService.getItem("serverRegion") !== "china" &&
+      navigator.language === "zh-CN"
+    ) {
+      toast.error(
+        i18n.t(
+          "Request timed out, You may change the server region to China to solve the connection issue in mainland China. Go to Settings > Account"
+        ),
+        { id: "adding-sync-error", duration: 6000 }
+      );
+      return;
+    }
+  }, 6000);
   let encryptedToken = await TokenService.getToken(service + "_token");
+  clearTimeout(timer);
   if (!encryptedToken || encryptedToken === "{}") {
     return {};
   }

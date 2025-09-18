@@ -40,9 +40,10 @@ class SettingDialog extends React.Component<
       isLemmatizeWord:
         ConfigService.getReaderConfig("isLemmatizeWord") === "yes",
       isOpenBook: ConfigService.getReaderConfig("isOpenBook") === "yes",
-      isExpandContent:
-        ConfigService.getReaderConfig("isExpandContent") === "yes",
+
       isDisablePopup: ConfigService.getReaderConfig("isDisablePopup") === "yes",
+      isDisableAutoScroll:
+        ConfigService.getReaderConfig("isDisableAutoScroll") === "yes",
       isDisableTrashBin:
         ConfigService.getReaderConfig("isDisableTrashBin") === "yes",
       isDeleteShelfBook:
@@ -51,8 +52,6 @@ class SettingDialog extends React.Component<
         ConfigService.getReaderConfig("isHideShelfBook") === "yes",
       isPreventSleep: ConfigService.getReaderConfig("isPreventSleep") === "yes",
       isOpenInMain: ConfigService.getReaderConfig("isOpenInMain") === "yes",
-      isDisableUpdate:
-        ConfigService.getReaderConfig("isDisableUpdate") === "yes",
       isPrecacheBook: ConfigService.getReaderConfig("isPrecacheBook") === "yes",
       appSkin: ConfigService.getReaderConfig("appSkin"),
       isUseBuiltIn: ConfigService.getReaderConfig("isUseBuiltIn") === "yes",
@@ -126,10 +125,13 @@ class SettingDialog extends React.Component<
     body?.setAttribute("style", "font-family:" + font + "!important");
     ConfigService.setReaderConfig("systemFont", font);
   };
-  handleJump = (url: string) => {
-    openExternalUrl(url);
-  };
   handleSetting = (stateName: string) => {
+    if (stateName === "isLemmatizeWord" && !this.props.isAuthed) {
+      toast.error(
+        this.props.t("This feature is not available in the free version")
+      );
+      return;
+    }
     this.setState({ [stateName]: !this.state[stateName] } as any);
     ConfigService.setReaderConfig(
       stateName,
@@ -140,48 +142,10 @@ class SettingDialog extends React.Component<
       reloadManager();
     }
   };
-  handleChangeLocation = async () => {
-    const { ipcRenderer } = window.require("electron");
-    const newPath = await ipcRenderer.invoke("select-path");
-    if (!newPath) {
-      return;
-    }
-    let isSuccess = await changePath(newPath);
-    if (!isSuccess) {
-      toast.error(this.props.t("Change failed"));
-      return;
-    }
-    ConfigService.setItem("storageLocation", newPath);
-    this.setState({ storageLocation: newPath });
-    toast.success(this.props.t("Change successful"));
-    this.props.handleFetchBooks();
-  };
-  handleSwitchLibrary = async () => {
-    const { ipcRenderer } = window.require("electron");
-    const newPath = await ipcRenderer.invoke("select-path");
-    if (!newPath) {
-      return;
-    }
-    let isSuccess = await changeLibrary(newPath);
-    if (!isSuccess) {
-      toast.error(this.props.t("Switch failed"));
-      return;
-    }
-    ConfigService.setItem("storageLocation", newPath);
-    this.setState({ storageLocation: newPath });
-    toast.success(this.props.t("Switch successful"));
-    this.props.handleFetchBooks();
-  };
   handleResetReaderPosition = () => {
     window
       .require("electron")
       .ipcRenderer.invoke("reset-reader-position", "ping");
-    toast.success(this.props.t("Reset successful"));
-  };
-  handleResetMainPosition = () => {
-    window
-      .require("electron")
-      .ipcRenderer.invoke("reset-main-position", "ping");
     toast.success(this.props.t("Reset successful"));
   };
   handleTheme = (name: string, index: number) => {
@@ -384,18 +348,6 @@ class SettingDialog extends React.Component<
                       className="change-location-button"
                       onClick={() => {
                         this.handleResetReaderPosition();
-                      }}
-                    >
-                      <Trans>Reset</Trans>
-                    </span>
-                  </div>
-                  <div className="setting-dialog-new-title">
-                    <Trans>Reset main window's position</Trans>
-
-                    <span
-                      className="change-location-button"
-                      onClick={() => {
-                        this.handleResetMainPosition();
                       }}
                     >
                       <Trans>Reset</Trans>

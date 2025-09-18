@@ -1,7 +1,7 @@
 .book-content-list {
   float: left;
   width: calc(100% - 15px);
-  margin-left: 18px;
+  margin-left: 15px;
 }
 .book-content-name {
   display: block;
@@ -40,4 +40,22 @@
   font-size: 13px;
   cursor: pointer;
   transition: transform 0.1s ease;
+}
+.book-content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 15px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.book-content-expand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 10px;
 }

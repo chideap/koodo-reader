@@ -10,15 +10,17 @@ import { getCloudConfig } from "../../../utils/file/common";
 import SyncService from "../../../utils/storage/syncService";
 import {
   getStorageLocation,
-  openExternalUrl,
+  openInBrowser,
   showDownloadProgress,
   supportedFormats,
 } from "../../../utils/common";
 import {
   ConfigService,
+  KookitConfig,
   SyncUtil,
 } from "../../../assets/lib/kookit-extra-browser.min";
-
+import { GooglePickerUtil } from "../../../utils/file/googlePicker";
+declare var window: any;
 type FileInfo = {
   name: string;
   size: number;
@@ -30,6 +32,7 @@ class ImportDialog extends React.Component<
   ImportDialogProps,
   ImportDialogState
 > {
+  googlePickerUtil: any;
   constructor(props: ImportDialogProps) {
     super(props);
     this.state = {
@@ -259,6 +262,82 @@ class ImportDialog extends React.Component<
 
     return allFiles;
   };
+  // 新增Google Picker处理方法
+  handleGooglePicker = async () => {
+    try {
+      let pickerUtil: any = await SyncService.getPickerUtil("google");
+      await pickerUtil.remote.refreshToken();
+      this.googlePickerUtil = new GooglePickerUtil({
+        accessToken: pickerUtil.remote.config.access_token,
+        apiKey: "",
+        appId: "1051055003225",
+      });
+
+      if (isElectron) {
+        const { ipcRenderer } = window.require("electron");
+        ipcRenderer.invoke("google-picker", {
+          url:
+            "https://dl.koodoreader.com/websites/google-picker.html?access_token=" +
+            pickerUtil.remote.config.access_token,
+        });
+        ipcRenderer.once("picker-finished", async (event: any, config: any) => {
+          if (config && config.action === "picked" && config.docs) {
+            for (const file of config.docs) {
+              await this.handleImportGoogleFile(file);
+            }
+          }
+        });
+      } else {
+        await this.googlePickerUtil.createPicker(this.handlePickerCallback);
+      }
+    } catch (error) {
+      console.error("Error creating Google Picker:", error);
+      toast.error(this.props.t("Failed to open Google Picker"));
+    }
+  };
+
+  // Google Picker回调处理
+  handlePickerCallback = async (data: any) => {
+    if (data.action === window.google.picker.Action.PICKED) {
+      const files = data.docs;
+
+      for (const file of files) {
+        await this.handleImportGoogleFile(file);
+      }
+    }
+  };
+
+  // 处理Google文件导入
+  handleImportGoogleFile = async (googleFile: any) => {
+    try {
+      // 检查文件格式
+      const fileExtension =
+        "." + googleFile.name.split(".").pop()?.toLowerCase();
+      if (!supportedFormats.includes(fileExtension)) {
+        toast.error(
+          this.props.t("Unsupported file format") + ": " + fileExtension
+        );
+        return;
+      }
+
+      toast.loading(this.props.t("Downloading") + ": " + googleFile.name, {
+        id: "google-download-" + googleFile.id,
+      });
+
+      // 下载文件
+      const arrayBuffer = await this.googlePickerUtil.downloadFile(
+        googleFile.id
+      );
+      const blob = new Blob([arrayBuffer]);
+      const file = new File([blob], googleFile.name);
+
+      toast.dismiss("google-download-" + googleFile.id);
+      await this.props.importBookFunc(file);
+    } catch (error) {
+      console.error("Error importing Google file:", error);
+      toast.error(this.props.t("Failed to import") + ": " + googleFile.name);
+    }
+  };
   render() {
     return (
       <div
@@ -296,6 +375,7 @@ class ImportDialog extends React.Component<
                         );
                         return;
                       }
+
                       if (!this.props.dataSourceList.includes(item.value)) {
                         this.props.handleSetting(true);
                         this.props.handleSettingMode("sync");
@@ -303,24 +383,38 @@ class ImportDialog extends React.Component<
                         let settingDrive = item.value;
                         if (
                           settingDrive === "dropbox" ||
+                          settingDrive === "yiyiwu" ||
+                          settingDrive === "dubox" ||
                           settingDrive === "google" ||
                           settingDrive === "boxnet" ||
                           settingDrive === "pcloud" ||
                           settingDrive === "adrive" ||
                           settingDrive === "microsoft_exp" ||
-                          settingDrive === "google_exp" ||
                           settingDrive === "microsoft"
                         ) {
-                          openExternalUrl(
-                            new SyncUtil(settingDrive, {}).getAuthUrl()
+                          openInBrowser(
+                            new SyncUtil(settingDrive, {}).getAuthUrl(
+                              ConfigService.getItem("serverRegion") ===
+                                "china" &&
+                                (settingDrive === "microsoft" ||
+                                  settingDrive === "microsoft_exp" ||
+                                  settingDrive === "adrive")
+                                ? KookitConfig.ThirdpartyConfig.cnCallbackUrl
+                                : KookitConfig.ThirdpartyConfig.callbackUrl
+                            )
                           );
                         }
+                        return;
+                      }
+                      if (item.value === "google") {
+                        this.handleGooglePicker();
                         return;
                       }
                       this.setState({
                         currentDrive: item.value,
                         currentPath: "",
                       });
+
                       this.listFolder(item.value, "");
                     }}
                   >

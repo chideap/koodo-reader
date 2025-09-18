@@ -3,7 +3,10 @@ body {
   background: rgba(255, 255, 255, 1);
   color: rgba(75, 75, 75, 1);
 }
-
+a {
+  color: blue;
+  text-decoration: none;
+}
 .delete-tag-container,
 .setting-subtitle,
 .book-more-action,
@@ -128,6 +131,7 @@ body {
 .animation-mask,
 .animation-mask-local,
 .sort-by-category-list:hover,
+.more-option-item:hover,
 .sort-by-order-list:hover,
 .action-dialog-add:hover,
 .action-dialog-delete:hover,
@@ -197,6 +201,12 @@ body {
 .book-cover {
   box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.18);
 }
+.book-spine,
+.background-box1,
+.background-box2,
+.background-box3 {
+  border: 1px solid rgba(191, 191, 191, 1);
+}
 .background-color-circle,
 .background-box1,
 .background-box2,
@@ -244,6 +254,7 @@ body {
   color: rgba(255, 255, 255, 1);
 }
 .book-content-name,
+.book-content-header,
 .book-subcontent-name,
 .book-bookmark-list,
 .nav-search-list-item,

@@ -11,89 +11,91 @@ class SliderList extends React.Component<SliderListProps, SliderListState> {
       isTyping: false,
       inputValue: "",
       isEntered: false,
-      value:
-        this.props.mode === "fontSize"
-          ? ConfigService.getReaderConfig("fontSize") || "17"
-          : this.props.mode === "scale"
-          ? ConfigService.getReaderConfig("scale") || "1"
-          : this.props.mode === "letterSpacing"
-          ? ConfigService.getReaderConfig("letterSpacing") || "0"
-          : this.props.mode === "paraSpacing"
-          ? ConfigService.getReaderConfig("paraSpacing") || "0"
-          : this.props.mode === "brightness"
-          ? ConfigService.getReaderConfig("brightness") || "1"
-          : ConfigService.getReaderConfig("margin") || "0",
+      fontSize: ConfigService.getReaderConfig("fontSize") || "17",
+      scale: ConfigService.getReaderConfig("scale") || "1",
+      letterSpacing: ConfigService.getReaderConfig("letterSpacing") || "0",
+      paraSpacing: ConfigService.getReaderConfig("paraSpacing") || "0",
+      brightness: ConfigService.getReaderConfig("brightness") || "1",
+      margin: ConfigService.getReaderConfig("margin") || "0",
     };
   }
-  handleRest = async () => {
-    if (this.props.mode === "scale" || this.props.mode === "margin") {
+  handleRest = async (mode) => {
+    if (mode === "scale" || mode === "margin") {
       BookUtil.reloadBooks();
       return;
     }
     this.props.renderBookFunc();
   };
-  onValueChange = (event: any) => {
-    if (this.props.mode === "fontSize") {
+  onValueChange = (event: any, mode: string) => {
+    if (mode === "fontSize") {
       const fontSize = event.target.value;
-      this.setState({ value: fontSize });
+      this.setState({ [mode]: fontSize });
       ConfigService.setReaderConfig("fontSize", fontSize);
-    } else if (this.props.mode === "scale") {
+    } else if (mode === "scale") {
       const scale = event.target.value;
-      this.setState({ value: scale });
+      this.setState({ [mode]: scale });
       ConfigService.setReaderConfig("scale", scale);
-    } else if (this.props.mode === "letterSpacing") {
+    } else if (mode === "letterSpacing") {
       const letterSpacing = event.target.value;
-      this.setState({ value: letterSpacing });
+      this.setState({ [mode]: letterSpacing });
       ConfigService.setReaderConfig("letterSpacing", letterSpacing);
-    } else if (this.props.mode === "paraSpacing") {
+    } else if (mode === "paraSpacing") {
       const paraSpacing = event.target.value;
-      this.setState({ value: paraSpacing });
+      this.setState({ [mode]: paraSpacing });
       ConfigService.setReaderConfig("paraSpacing", paraSpacing);
-    } else if (this.props.mode === "brightness") {
+    } else if (mode === "brightness") {
       let brightness = event.target.value;
       if (brightness < 0.3) {
         brightness = 0.3;
       }
-      this.setState({ value: brightness });
+      this.setState({ [mode]: brightness });
       ConfigService.setReaderConfig("brightness", brightness);
     } else {
       const margin = event.target.value;
-      this.setState({ value: margin });
+      this.setState({ [mode]: margin } as any);
       ConfigService.setReaderConfig("margin", margin);
     }
   };
-  onValueInput = (event: any) => {
-    this.setState({ value: event.target.value });
+  onValueInput = (event: any, mode: string) => {
+    this.setState({ [mode]: event.target.value } as any);
   };
-  handleMinus = (step: number) => {
-    this.setState({ value: parseFloat(this.state.value) - step + "" });
-    this.onValueChange({
-      target: { value: parseFloat(this.state.value) - step + "" },
-    });
+  handleMinus = (step: number, mode: string) => {
+    this.setState({ [mode]: parseFloat(this.state[mode]) - step + "" } as any);
+    this.onValueChange(
+      {
+        target: { value: parseFloat(this.state[mode]) - step + "" },
+      },
+      mode
+    );
   };
-  handleAdd = (step: number) => {
-    this.setState({ value: parseFloat(this.state.value) + step + "" });
-    this.onValueChange({
-      target: { value: parseFloat(this.state.value) + step + "" },
-    });
+  handleAdd = (step: number, mode: string) => {
+    this.setState({ [mode]: parseFloat(this.state[mode]) + step + "" } as any);
+    this.onValueChange(
+      {
+        target: { value: parseFloat(this.state[mode]) + step + "" },
+      },
+      mode
+    );
   };
   render() {
     return (
       <div className="font-size-setting">
         <div className="font-size-title">
           <span style={{ marginRight: "10px" }}>
-            <Trans>{this.props.title}</Trans>
+            <Trans>{this.props.item.title}</Trans>
           </span>
 
           <input
             className="input-value"
             value={
-              this.state.isTyping ? this.state.inputValue : this.state.value
+              this.state.isTyping
+                ? this.state.inputValue
+                : this.state[this.props.item.mode]
             }
             type="number"
             step={
-              this.props.title === "Page width" ||
-              this.props.title === "Brightness"
+              this.props.item.title === "Page width" ||
+              this.props.item.title === "Brightness"
                 ? "0.1"
                 : "1"
             }
@@ -112,9 +114,9 @@ class SliderList extends React.Component<SliderListProps, SliderListState> {
               if (!this.state.isEntered) {
                 let fieldVal = event.target.value;
                 if (!fieldVal) return;
-                this.onValueChange(event);
+                this.onValueChange(event, this.props.item.mode);
                 this.setState({ isTyping: false });
-                this.handleRest();
+                this.handleRest(this.props.item.mode);
               } else {
                 this.setState({ isEntered: false });
               }
@@ -124,38 +126,40 @@ class SliderList extends React.Component<SliderListProps, SliderListState> {
                 this.setState({ isEntered: true });
                 let fieldVal = event.target.value;
                 if (!fieldVal) return;
-                this.onValueChange(event);
+                this.onValueChange(event, this.props.item.mode);
                 this.setState({ isTyping: false });
-                this.handleRest();
+                this.handleRest(this.props.item.mode);
               }
             }}
           />
-          <span style={{ marginLeft: "10px" }}>{this.state.value}</span>
+          <span style={{ marginLeft: "10px" }}>
+            {this.state[this.props.item.mode]}
+          </span>
         </div>
         <div style={{ display: "flex", justifyContent: "space-around" }}>
-          <span className="ultra-small-size">{this.props.minLabel}</span>
+          <span className="ultra-small-size">{this.props.item.minLabel}</span>
           <div className="font-size-selector">
             <input
               className="input-progress"
-              value={this.state.value}
+              value={this.state[this.props.item.mode]}
               type="range"
-              max={this.props.maxValue}
-              min={this.props.minValue}
-              step={this.props.step}
+              max={this.props.item.maxValue}
+              min={this.props.item.minValue}
+              step={this.props.item.step}
               onInput={(event) => {
-                this.onValueChange(event);
+                this.onValueChange(event, this.props.item.mode);
               }}
               onChange={(event) => {
-                this.onValueInput(event);
+                this.onValueInput(event, this.props.item.mode);
               }}
               onMouseUp={() => {
-                this.handleRest();
+                this.handleRest(this.props.item.mode);
               }}
               style={{ position: "absolute", bottom: "11px" }}
             />
           </div>
           <span className="ultra-large-size" style={{ fontSize: "16px" }}>
-            {this.props.maxLabel}
+            {this.props.item.maxLabel}
           </span>
         </div>
       </div>

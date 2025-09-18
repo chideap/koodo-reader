@@ -17,6 +17,7 @@ import i18n from "../i18n";
 import { getThirdpartyRequest } from "./request/thirdparty";
 import { getCloudConfig } from "./file/common";
 import SyncService from "./storage/syncService";
+import localforage from "localforage";
 declare var window: any;
 export const supportedFormats = [
   ".epub",
@@ -53,6 +54,20 @@ export const calculateFileMD5 = (file: File): Promise<string> => {
     };
 
     reader.readAsArrayBuffer(file);
+  });
+};
+export const vexPromptAsync = (message, placeholder = "", value = "") => {
+  return new Promise((resolve) => {
+    window.vex.dialog.buttons.YES.text = i18n.t("Confirm");
+    window.vex.dialog.buttons.NO.text = i18n.t("Cancel");
+    window.vex.dialog.prompt({
+      message,
+      placeholder,
+      value,
+      callback: function (input) {
+        resolve(input);
+      },
+    });
   });
 };
 export const fetchFileFromPath = (filePath: string) => {
@@ -177,6 +192,11 @@ export const openExternalUrl = (url: string, isPlugin: boolean = false) => {
     ? ConfigService.getReaderConfig("isUseBuiltIn") === "yes" || isPlugin
       ? window.require("electron").ipcRenderer.invoke("open-url", { url })
       : window.require("electron").shell.openExternal(url)
+    : window.open(url);
+};
+export const openInBrowser = (url: string) => {
+  isElectron
+    ? window.require("electron").shell.openExternal(url)
     : window.open(url);
 };
 export const getPageWidth = (
@@ -387,6 +407,8 @@ export const preCacheAllBooks = async (bookList: Book[]) => {
         isDarkMode: "no",
         isMobile: "no",
         password: getPdfPassword(selectedBook),
+        isScannedPDF:
+          selectedBook.description.indexOf("scanned PDF") > -1 ? "yes" : "no",
       },
       Kookit
     );
@@ -397,6 +419,7 @@ export const preCacheAllBooks = async (bookList: Book[]) => {
   }
 };
 export const generateSyncRecord = async () => {
+  ConfigService.setAllSyncRecord({});
   for (let database of CommonTool.databaseList) {
     let itemList = await DatabaseService.getAllRecords(database);
     for (let item of itemList) {
@@ -624,6 +647,9 @@ export const testConnection = async (driveName: string, driveConfig: any) => {
       storagePath: getStorageLocation(),
       isUseCache: false,
     });
+    if (fs.existsSync(getStorageLocation() + "/config/test.txt")) {
+      fs.unlinkSync(getStorageLocation() + "/config/test.txt");
+    }
     if (result) {
       toast.success(i18n.t("Connection successful"), {
         id: "testing-connection-id",
@@ -641,9 +667,7 @@ export const testConnection = async (driveName: string, driveConfig: any) => {
         id: "testing-connection-id",
       });
     }
-    if (fs.existsSync(getStorageLocation() + "/config/test.txt")) {
-      fs.unlinkSync(getStorageLocation() + "/config/test.txt");
-    }
+
     return result;
   } else {
     let thirdpartyRequest = await getThirdpartyRequest();
@@ -669,22 +693,75 @@ export const testConnection = async (driveName: string, driveConfig: any) => {
     return await syncUtil.deleteFile("test.txt", "config");
   }
 };
+export const testCORS = async (url: string) => {
+  if (isElectron) return true;
+  if (window.location.href.startsWith("https://")) {
+    if (url.startsWith("http://")) {
+      toast.error(
+        i18n.t(
+          "This data source cannot be accessed due to browser's security policy. Please switch to another data source or HTTPS-based service provider."
+        )
+      );
+      return false;
+    }
+  }
+  try {
+    const response = await fetch(url, {
+      method: "GET", // 或 'POST' 等
+      mode: "cors", // 明确指定跨域模式
+      headers: {
+        "Content-Type": "application/json", // 如果是POST，可添加
+      },
+      // body: JSON.stringify({ test: 'data' }) // 如果是POST
+    });
+    if (response.ok) {
+      const data = await response.text();
+      return true;
+    } else {
+      return true;
+    }
+  } catch (error) {
+    toast.error(
+      i18n.t(
+        "This data source cannot be accessed from browser due to CORS policy. Please switch to another data source or CORS-enabled service provider."
+      )
+    );
+    console.error("CORS not supported:", error);
+    return false;
+  }
+};
+
 export const getTargetHref = (event: any) => {
-  let href =
-    (event.target.innerText && event.target.innerText.startsWith("http")) ||
-    (event.target.tagName !== "IMG" && event.target.getAttribute("href")) ||
-    (event.target.tagName !== "IMG" && event.target.getAttribute("src")) ||
-    (event.target.parentNode &&
-      ((event.target.parentNode.getAttribute &&
+  let href = "";
+  if (!event || !event.target) return href;
+  if (event.target.innerText && event.target.innerText.startsWith("http")) {
+    href = event.target.innerText;
+  }
+  if (event.target.tagName !== "IMG") {
+    href =
+      (event.target.getAttribute && event.target.getAttribute("href")) ||
+      (event.target.getAttribute && event.target.getAttribute("src")) ||
+      "";
+  }
+  if (event.target.parentNode) {
+    href =
+      href ||
+      (event.target.parentNode.getAttribute &&
         event.target.parentNode.getAttribute("href")) ||
-        (event.target.parentNode.getAttribute &&
-          event.target.parentNode.getAttribute("src")))) ||
-    (event.target.parentNode.parentNode &&
-      ((event.target.parentNode.parentNode.getAttribute &&
+      (event.target.parentNode.getAttribute &&
+        event.target.parentNode.getAttribute("src")) ||
+      "";
+  }
+  if (event.target.parentNode.parentNode) {
+    href =
+      href ||
+      (event.target.parentNode.parentNode.getAttribute &&
         event.target.parentNode.parentNode.getAttribute("href")) ||
-        (event.target.parentNode.parentNode.getAttribute &&
-          event.target.parentNode.parentNode.getAttribute("src")))) ||
-    "";
+      (event.target.parentNode.parentNode.getAttribute &&
+        event.target.parentNode.parentNode.getAttribute("src")) ||
+      "";
+  }
+
   return href;
 };
 export const getPdfPassword = (book: Book) => {
@@ -762,4 +839,52 @@ export const showDownloadProgress = (
     }
   }, 500);
   return timer;
+};
+export const clearAllData = async () => {
+  localStorage.clear();
+  sessionStorage.clear();
+  //clear all indexed db data
+
+  if (isElectron) {
+    let storageLocation = getStorageLocation();
+    const fs = window.require("fs");
+    let databaseList = CommonTool.databaseList;
+    for (let i = 0; i < databaseList.length; i++) {
+      await window.require("electron").ipcRenderer.invoke("close-database", {
+        dbName: databaseList[i],
+        storagePath: getStorageLocation(),
+      });
+    }
+    if (fs.existsSync(storageLocation)) {
+      fs.rmSync(storageLocation, { recursive: true, force: true });
+    }
+  }
+  await localforage.clear();
+};
+const convertBlobToDataURL = async (blobUrl) => {
+  const response = await fetch(blobUrl);
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+export const processHtml = async (html) => {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  const images: any[] = Array.from(doc.getElementsByTagName("img"));
+  for (const img of images) {
+    if (img.src && img.src.startsWith("blob:")) {
+      try {
+        const dataUrl = await convertBlobToDataURL(img.src);
+        img.src = dataUrl;
+        img.style.maxWidth = "100%"; // 确保图片不会超出容器宽度
+      } catch (error) {
+        console.error("Error converting blob to data URL:", error);
+      }
+    }
+  }
+  return doc.body.innerHTML;
 };

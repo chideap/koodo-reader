@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 import {
   formatTimestamp,
   handleContextMenu,
-  openExternalUrl,
+  openInBrowser,
   reloadManager,
   WEBSITE_URL,
 } from "../../../utils/common";
@@ -55,11 +55,26 @@ class AccountSetting extends React.Component<
       this.props.handleFetchUserInfo();
     }
   }
+  UNSAFE_componentWillReceiveProps(
+    nextProps: Readonly<SettingInfoProps>,
+    nextContext: any
+  ): void {
+    if (
+      nextProps.isShowSupport &&
+      nextProps.isShowSupport !== this.props.isShowSupport
+    ) {
+      toast(
+        this.props.t(
+          "Your Pro trial has expired, please renew it to continue using the Pro features"
+        )
+      );
+    }
+  }
   handleRest = (_bool: boolean) => {
     toast.success(this.props.t("Change successful"));
   };
   handleJump = (url: string) => {
-    openExternalUrl(url);
+    openInBrowser(url);
   };
   handleSetting = (stateName: string) => {
     this.setState({ [stateName]: !this.state[stateName] } as any);
@@ -75,7 +90,14 @@ class AccountSetting extends React.Component<
     }
     this.setState({ settingLogin: event.target.value });
     if (event.target.value !== "email") {
-      let url = LoginHelper.getAuthUrl(event.target.value, "manual");
+      let url = LoginHelper.getAuthUrl(
+        event.target.value,
+        "manual",
+        ConfigService.getItem("serverRegion") === "china" &&
+          event.target.value === "microsoft"
+          ? KookitConfig.ThirdpartyConfig.cnCallbackUrl
+          : KookitConfig.ThirdpartyConfig.callbackUrl
+      );
       this.handleJump(url);
     }
   };
@@ -137,7 +159,11 @@ class AccountSetting extends React.Component<
         scope:
           KookitConfig.LoginAuthRequest[this.state.settingLogin].extraParams
             .scope,
-        redirect_uri: KookitConfig.ThirdpartyConfig.callbackUrl,
+        redirect_uri:
+          ConfigService.getItem("serverRegion") === "china" &&
+          this.state.settingLogin === "microsoft"
+            ? KookitConfig.ThirdpartyConfig.cnCallbackUrl
+            : KookitConfig.ThirdpartyConfig.callbackUrl,
       });
     } else {
       res = await loginRegister(
@@ -225,7 +251,11 @@ class AccountSetting extends React.Component<
                   onClick={() => {
                     let url = LoginHelper.getAuthUrl(
                       this.state.settingLogin,
-                      "manual"
+                      "manual",
+                      ConfigService.getItem("serverRegion") === "china" &&
+                        this.state.settingLogin === "microsoft"
+                        ? KookitConfig.ThirdpartyConfig.cnCallbackUrl
+                        : KookitConfig.ThirdpartyConfig.callbackUrl
                     );
                     this.handleJump(url);
                   }}
@@ -257,6 +287,30 @@ class AccountSetting extends React.Component<
                       ["email"]: e.target.value.trim(),
                     },
                   }));
+                }
+              }}
+              onBlur={(e) => {
+                const email = e.target.value.trim();
+                if (email) {
+                  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                  if (email && !emailRegex.test(email)) {
+                    toast.error(this.props.t("Invalid email format"));
+                    return;
+                  }
+                  // clear code and token if email changed
+                  this.setState((prevState) => ({
+                    loginConfig: {
+                      ...prevState.loginConfig,
+                      ["token"]: "",
+                    },
+                  }));
+                  //empty code box
+                  const codeBox = document.getElementById(
+                    "token-dialog-code-box"
+                  ) as HTMLInputElement;
+                  if (codeBox) {
+                    codeBox.value = "";
+                  }
                 }
               }}
               onContextMenu={() => {
@@ -772,7 +826,7 @@ class AccountSetting extends React.Component<
           <div
             onClick={async () => {
               if (!this.props.isAuthed) {
-                openExternalUrl(
+                openInBrowser(
                   WEBSITE_URL +
                     (ConfigService.getReaderConfig("lang").startsWith("zh")
                       ? "/zh"
@@ -785,7 +839,7 @@ class AccountSetting extends React.Component<
               if (response.code === 200) {
                 let tempToken = response.data.access_token;
                 let deviceUuid = await TokenService.getFingerprint();
-                openExternalUrl(
+                openInBrowser(
                   WEBSITE_URL +
                     (ConfigService.getReaderConfig("lang").startsWith("zh")
                       ? "/zh"

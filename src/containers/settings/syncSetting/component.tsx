@@ -9,15 +9,19 @@ import { syncSettingList } from "../../../constants/settingList";
 import { themeList } from "../../../constants/themeList";
 import toast from "react-hot-toast";
 import {
+  generateSyncRecord,
   handleContextMenu,
   openExternalUrl,
+  openInBrowser,
   testConnection,
+  testCORS,
   WEBSITE_URL,
 } from "../../../utils/common";
 import { getStorageLocation } from "../../../utils/common";
 import { driveInputConfig, driveList } from "../../../constants/driveList";
 import {
   ConfigService,
+  KookitConfig,
   SyncUtil,
   TokenService,
 } from "../../../assets/lib/kookit-extra-browser.min";
@@ -32,38 +36,13 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
   constructor(props: SettingInfoProps) {
     super(props);
     this.state = {
-      isTouch: ConfigService.getReaderConfig("isTouch") === "yes",
-      isMergeWord: ConfigService.getReaderConfig("isMergeWord") === "yes",
-      isPreventTrigger:
-        ConfigService.getReaderConfig("isPreventTrigger") === "yes",
-      isAutoFullscreen:
-        ConfigService.getReaderConfig("isAutoFullscreen") === "yes",
-      isPreventAdd: ConfigService.getReaderConfig("isPreventAdd") === "yes",
-      isLemmatizeWord:
-        ConfigService.getReaderConfig("isLemmatizeWord") === "yes",
-      isOpenBook: ConfigService.getReaderConfig("isOpenBook") === "yes",
-      isExpandContent:
-        ConfigService.getReaderConfig("isExpandContent") === "yes",
-      isDisablePopup: ConfigService.getReaderConfig("isDisablePopup") === "yes",
-      isDisableTrashBin:
-        ConfigService.getReaderConfig("isDisableTrashBin") === "yes",
-      isDeleteShelfBook:
-        ConfigService.getReaderConfig("isDeleteShelfBook") === "yes",
-      isHideShelfBook:
-        ConfigService.getReaderConfig("isHideShelfBook") === "yes",
-      isOpenInMain: ConfigService.getReaderConfig("isOpenInMain") === "yes",
-      isDisableUpdate:
-        ConfigService.getReaderConfig("isDisableUpdate") === "yes",
-      isPrecacheBook: ConfigService.getReaderConfig("isPrecacheBook") === "yes",
       appSkin: ConfigService.getReaderConfig("appSkin"),
-      isUseBuiltIn: ConfigService.getReaderConfig("isUseBuiltIn") === "yes",
       isKeepLocal: ConfigService.getReaderConfig("isKeepLocal") === "yes",
+      autoOffline: ConfigService.getReaderConfig("autoOffline") === "yes",
       isDisableAutoSync:
         ConfigService.getReaderConfig("isDisableAutoSync") === "yes",
       isEnableKoodoSync:
         ConfigService.getReaderConfig("isEnableKoodoSync") === "yes",
-      isDisablePDFCover:
-        ConfigService.getReaderConfig("isDisablePDFCover") === "yes",
       currentThemeIndex: _.findLastIndex(themeList, {
         name: ConfigService.getReaderConfig("themeColor"),
       }),
@@ -78,7 +57,7 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
     toast.success(this.props.t("Change successful"));
   };
   handleJump = (url: string) => {
-    openExternalUrl(url);
+    openInBrowser(url);
   };
   handleSetting = (stateName: string) => {
     this.setState({ [stateName]: !this.state[stateName] } as any);
@@ -117,15 +96,25 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
     let settingDrive = targetDrive;
     if (
       settingDrive === "dropbox" ||
+      settingDrive === "dubox" ||
+      settingDrive === "yiyiwu" ||
       settingDrive === "google" ||
       settingDrive === "boxnet" ||
       settingDrive === "pcloud" ||
       settingDrive === "adrive" ||
       settingDrive === "microsoft_exp" ||
-      settingDrive === "google_exp" ||
       settingDrive === "microsoft"
     ) {
-      this.handleJump(new SyncUtil(settingDrive, {}).getAuthUrl());
+      this.handleJump(
+        new SyncUtil(settingDrive, {}).getAuthUrl(
+          ConfigService.getItem("serverRegion") === "china" &&
+            (settingDrive === "microsoft" ||
+              settingDrive === "microsoft_exp" ||
+              settingDrive === "adrive")
+            ? KookitConfig.ThirdpartyConfig.cnCallbackUrl
+            : KookitConfig.ThirdpartyConfig.callbackUrl
+        )
+      );
     }
   };
   handleDeleteDataSource = async (event: any) => {
@@ -313,6 +302,22 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                         id={"token-dialog-" + item.value + "-box"}
                         className="token-dialog-username-box"
                       />
+                      {item.value === "endpoint" ? (
+                        <div
+                          style={{
+                            marginTop: "5px",
+                            marginLeft: "2px",
+                            fontSize: "12px",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {this.props.t(
+                            "This endpoint usually don't contain bucket name"
+                          )}
+                        </div>
+                      ) : (
+                        ""
+                      )}
                       {item.example && (
                         <div
                           style={{
@@ -402,16 +407,23 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
               <div
                 className="voice-add-confirm"
                 onClick={async () => {
+                  if (this.props.settingDrive === "webdav") {
+                    let corsResult = await testCORS(this.state.driveConfig.url);
+
+                    if (!corsResult) {
+                      return;
+                    }
+                  }
                   if (
                     this.props.settingDrive === "docker" ||
                     this.props.settingDrive === "webdav" ||
                     this.props.settingDrive === "s3compatible"
                   ) {
-                    let result = await testConnection(
+                    let connectionResult = await testConnection(
                       this.props.settingDrive,
                       this.state.driveConfig
                     );
-                    if (!result) {
+                    if (!connectionResult) {
                       return;
                     }
                   }
@@ -431,19 +443,27 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                   <Trans>Cancel</Trans>
                 </div>
                 {(this.props.settingDrive === "dropbox" ||
+                  this.props.settingDrive === "dubox" ||
+                  this.props.settingDrive === "yiyiwu" ||
                   this.props.settingDrive === "google" ||
                   this.props.settingDrive === "boxnet" ||
                   this.props.settingDrive === "pcloud" ||
                   this.props.settingDrive === "adrive" ||
                   this.props.settingDrive === "microsoft_exp" ||
-                  this.props.settingDrive === "google_exp" ||
                   this.props.settingDrive === "microsoft") && (
                   <div
                     className="voice-add-confirm"
                     style={{ marginRight: "10px" }}
                     onClick={async () => {
                       this.handleJump(
-                        new SyncUtil(this.props.settingDrive, {}).getAuthUrl()
+                        new SyncUtil(this.props.settingDrive, {}).getAuthUrl(
+                          ConfigService.getItem("serverRegion") === "china" &&
+                            (this.props.settingDrive === "microsoft" ||
+                              this.props.settingDrive === "microsoft_exp" ||
+                              this.props.settingDrive === "adrive")
+                            ? KookitConfig.ThirdpartyConfig.cnCallbackUrl
+                            : KookitConfig.ThirdpartyConfig.callbackUrl
+                        )
                       );
                     }}
                   >
@@ -460,6 +480,14 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                     className="voice-add-confirm"
                     style={{ marginRight: "10px" }}
                     onClick={async () => {
+                      if (this.props.settingDrive === "webdav") {
+                        let corsResult = await testCORS(
+                          this.state.driveConfig.url
+                        );
+                        if (!corsResult) {
+                          return;
+                        }
+                      }
                       testConnection(
                         this.props.settingDrive,
                         this.state.driveConfig
@@ -604,7 +632,23 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
             </select>
           </div>
         )}
+
         {this.props.isAuthed && this.renderSwitchOption(syncSettingList)}
+        {this.props.isAuthed && (
+          <div className="setting-dialog-new-title">
+            <Trans>Reset sync records</Trans>
+
+            <span
+              className="change-location-button"
+              onClick={async () => {
+                await generateSyncRecord();
+                toast.success(this.props.t("Reset successful"));
+              }}
+            >
+              <Trans>Reset</Trans>
+            </span>
+          </div>
+        )}
       </>
     );
   }

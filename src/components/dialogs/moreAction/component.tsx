@@ -9,6 +9,7 @@ import {
   exportDictionaryHistory,
   exportHighlights,
   exportNotes,
+  getBookName,
 } from "../../../utils/file/export";
 import DatabaseService from "../../../utils/storage/databaseService";
 import {
@@ -58,11 +59,7 @@ class ActionDialog extends React.Component<MoreActionProps, MoreActionState> {
                 this.props.currentBook.path
               ).then((result: any) => {
                 toast.success(this.props.t("Export successful"));
-                saveAs(
-                  new Blob([result]),
-                  this.props.currentBook.name +
-                    `.${this.props.currentBook.format.toLocaleLowerCase()}`
-                );
+                saveAs(new Blob([result]), getBookName(this.props.currentBook));
               });
             }}
           >
@@ -168,6 +165,7 @@ class ActionDialog extends React.Component<MoreActionProps, MoreActionState> {
                     isDarkMode: "no",
                     isMobile: "no",
                     password: getPdfPassword(this.props.currentBook),
+                    isScannedPDF: "no",
                   },
                   Kookit
                 );
@@ -228,9 +226,11 @@ class ActionDialog extends React.Component<MoreActionProps, MoreActionState> {
                   toast.error(this.props.t("File not found"));
                   return;
                 }
-
-                const { shell } = window.require("electron");
-                shell.showItemInFolder(bookPath);
+                const { ipcRenderer } = window.require("electron");
+                ipcRenderer.invoke("open-explorer-folder", {
+                  path: bookPath,
+                  isFolder: false,
+                });
               }}
             >
               <p className="action-name">

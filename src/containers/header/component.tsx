@@ -16,7 +16,6 @@ import {
   getLastSyncTimeFromConfigJson,
   removeCloudConfig,
   upgradeConfig,
-  upgradePro,
   upgradeStorage,
 } from "../../utils/file/common";
 import toast from "react-hot-toast";
@@ -30,6 +29,7 @@ import {
   addChatBox,
   checkBrokenData,
   checkMissingBook,
+  generateSyncRecord,
   getChatLocale,
   getStorageLocation,
   removeChatBox,
@@ -61,7 +61,6 @@ class Header extends React.Component<HeaderProps, HeaderState> {
     this.props.handleFetchAuthed();
     this.props.handleFetchDefaultSyncOption();
     this.props.handleFetchDataSourceList();
-
     if (isElectron) {
       const fs = window.require("fs");
       const path = window.require("path");
@@ -160,7 +159,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       if (ConfigService.getReaderConfig("isProUpgraded") !== "yes") {
         try {
           ConfigService.setReaderConfig("isProUpgraded", "yes");
-          await upgradePro();
+          await generateSyncRecord();
         } catch (error) {
           console.error(error);
         }
@@ -184,7 +183,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
   handleFinishUpgrade = () => {
     setTimeout(() => {
       this.props.history.push("/manager/home");
-    }, 1000);
+    }, 2000);
   };
 
   syncFromLocation = async () => {
@@ -406,34 +405,35 @@ class Header extends React.Component<HeaderProps, HeaderState> {
             clearInterval(this.timer);
             this.setState({ isSync: false });
             return;
+          } else {
+            toast.loading(
+              this.props.t("Start Transfering Data") +
+                " (" +
+                stats.completed +
+                "/" +
+                stats.total +
+                ")" +
+                " (" +
+                this.props.t(
+                  driveList.find(
+                    (item) =>
+                      item.value === ConfigService.getItem("defaultSyncOption")
+                  )?.label || ""
+                ) +
+                ")",
+              {
+                id: "syncing",
+              }
+            );
           }
-          toast.loading(
-            this.props.t("Start Transfering Data") +
-              " (" +
-              stats.completed +
-              "/" +
-              stats.total +
-              ")" +
-              " (" +
-              this.props.t(
-                driveList.find(
-                  (item) =>
-                    item.value === ConfigService.getItem("defaultSyncOption")
-                )?.label || ""
-              ) +
-              ")",
-            {
-              id: "syncing",
-            }
-          );
         }
       }
     }, 1000);
     try {
       let res = await this.beforeSync();
       if (!res) {
-        this.setState({ isSync: false });
         clearInterval(this.timer);
+        this.setState({ isSync: false });
         return;
       }
       let compareResult = await this.getCompareResult();
@@ -449,6 +449,9 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       this.setState({ isSync: false });
       return;
     }
+    setTimeout(() => {
+      toast.dismiss("syncing");
+    }, 2000);
   };
   handleSuccess = async () => {
     this.props.handleFetchBooks();
@@ -457,9 +460,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
     toast.success(this.props.t("Synchronisation successful"), {
       id: "syncing",
     });
-    setTimeout(() => {
-      toast.dismiss("syncing");
-    }, 1000);
+
     if (
       ConfigService.getItem("defaultSyncOption") === "adrive" &&
       ConfigService.getReaderConfig("hasShowAliyunWarning") !== "yes"
@@ -497,17 +498,21 @@ class Header extends React.Component<HeaderProps, HeaderState> {
         99,
         ConfigService.getItem("defaultSyncOption")
       );
+
       clearInterval(this.timer);
+      this.setState({ isSync: false });
       toast.loading(this.props.t("Almost finished"), {
         id: "syncing",
       });
       await this.handleSuccess();
     } catch (error) {
       console.error(error);
+      clearInterval(this.timer);
+      this.setState({ isSync: false });
       toast.error(this.props.t("Sync failed"), {
         id: "syncing",
       });
-      clearInterval(this.timer);
+
       return;
     }
   };
@@ -546,7 +551,8 @@ class Header extends React.Component<HeaderProps, HeaderState> {
                   WEBSITE_URL +
                   (ConfigService.getReaderConfig("lang").startsWith("zh")
                     ? "/zh/faq"
-                    : "/en/faq"),
+                    : "/en/faq") +
+                  "?referer=app",
                 locale: getChatLocale(),
               });
             }}
@@ -678,7 +684,8 @@ class Header extends React.Component<HeaderProps, HeaderState> {
               onClick={() => {
                 if (
                   window.location.href.startsWith("http") &&
-                  window.location.hostname !== "web.koodoreader.com"
+                  window.location.hostname !== "web.koodoreader.com" &&
+                  window.location.hostname !== "web.koodoreader.cn"
                 ) {
                   this.props.handleSetting(true);
                   this.props.handleSettingMode("account");

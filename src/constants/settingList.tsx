@@ -37,6 +37,12 @@ export const generalSettingList = [
   },
   {
     isElectron: true,
+    title: "Auto maximize main window",
+    desc: "Main window will be maximized to fit the screen when launching",
+    propName: "isAutoMaximizeWin",
+  },
+  {
+    isElectron: true,
     title: "Automatically launch on system startup",
     propName: "isAutoLaunch",
   },
@@ -52,6 +58,11 @@ export const generalSettingList = [
     title: "Auto precache books after import",
     desc: "Pre-cache books after import to increase opening speed, Koodo will generate a precache version of the original book and save it into your library",
     propName: "isPrecacheBook",
+  },
+  {
+    isElectron: false,
+    title: "Export books with original name",
+    propName: "isExportOriginalName",
   },
   {
     isElectron: true,
@@ -88,6 +99,12 @@ export const syncSettingList = [
     title: "Disable automatic sync",
     desc: "By default, Koodo Reader will automatically synchronize your data when you open the app and exit reading",
     propName: "isDisableAutoSync",
+  },
+  {
+    isElectron: false,
+    title: "Auto download cloud books",
+    desc: "To reduce storage usage, only the book metadata is downloaded by default, and the book files are not downloaded. After enabling this option, all book files will be downloaded during synchronization",
+    propName: "autoOffline",
   },
   {
     isElectron: false,
@@ -133,17 +150,12 @@ export const readingSettingList = [
     desc: "The book that you read from last time will be open automatically when launching",
     propName: "isOpenBook",
   },
+
   {
     isElectron: true,
     title: "Auto open book in full screen",
     desc: "Reader window will be maximized to fit the screen when opening a book",
     propName: "isAutoFullscreen",
-  },
-  {
-    isElectron: false,
-    title: "Auto expand content",
-    desc: "All the folded content will be expanded in the navigation panel",
-    propName: "isExpandContent",
   },
   {
     isElectron: false,
@@ -153,11 +165,17 @@ export const readingSettingList = [
   },
   {
     isElectron: false,
+    title: "Disable auto scroll to next or previous chapter",
+    desc: "Disable auto scroll to next or previous chapter when reaching the end of the current chapter",
+    propName: "isDisableAutoScroll",
+  },
+  {
+    isElectron: false,
     title: "Overwrite the default link style in the book",
     propName: "isOverwriteLink",
   },
   // {
-  //   isElectron: true,
+  //   isElectron: false,
   //   title: "Lemmatize words when looking up in a dictionary",
   //   desc: "To reduce the different forms of a word to one single form, for example, reducing builds, building or built to build, reducing cats to cat, reducing fastest to fast",
   //   propName: "isLemmatizeWord",
@@ -221,58 +239,82 @@ export const readerSettingList = [
   {
     title: "Sliding animation",
     propName: "isSliding",
+    isPDF: true,
   },
   {
     title: "Render PDF from even page",
     propName: "isStartFromEven",
+    isPDF: true,
   },
   {
     title: "Text indentation",
     propName: "isIndent",
+    isPDF: false,
   },
   {
     title: "Bold",
     propName: "isBold",
+    isPDF: false,
   },
   {
     title: "Italic",
     propName: "isItalic",
+    isPDF: false,
   },
   {
     title: "Underline",
     propName: "isUnderline",
+    isPDF: false,
   },
   {
     title: "Shadow",
     propName: "isShadow",
+    isPDF: false,
   },
   {
     title: "Invert color",
     propName: "isInvert",
+    isPDF: true,
   },
   {
     title: "Hide footer",
     propName: "isHideFooter",
+    isPDF: true,
   },
   {
     title: "Hide header",
     propName: "isHideHeader",
+    isPDF: true,
   },
   {
     title: "Hide mimical background",
     propName: "isHideBackground",
+    isPDF: true,
   },
   {
     title: "Hide navigation button",
     propName: "isHidePageButton",
+    isPDF: true,
   },
   {
     title: "Hide menu button",
     propName: "isHideMenuButton",
+    isPDF: true,
   },
   {
     title: "Hide AI button",
     propName: "isHideAIButton",
+    isPDF: true,
+  },
+  {
+    title: "Hide page scale button",
+    propName: "isHideScaleButton",
+    isPDF: true,
+  },
+  {
+    title: "Hide pdf to text button",
+    propName: "isHidePDFConvertButton",
+    isPDF: true,
   },
 ];
 export const officialTranList = {
@@ -287,6 +329,38 @@ export const officialTranList = {
   Italian: "Italian",
   Russian: "Russian",
   Portuguese: "Portuguese",
+  Arabic: "Arabic",
+  Bengali: "Bengali",
+  Bulgarian: "Bulgarian",
+  Croatian: "Croatian",
+  Czech: "Czech",
+  Danish: "Danish",
+  Dutch: "Dutch",
+  Finnish: "Finnish",
+  Greek: "Greek",
+  Hebrew: "Hebrew",
+  Hindi: "Hindi",
+  Hungarian: "Hungarian",
+  Icelandic: "Icelandic",
+  Indonesian: "Indonesian",
+  Kannada: "Kannada",
+  Latvian: "Latvian",
+  Lithuanian: "Lithuanian",
+  Malay: "Malay",
+  Marathi: "Marathi",
+  Norwegian: "Norwegian",
+  Polish: "Polish",
+  Romanian: "Romanian",
+  Serbian: "Serbian",
+  Slovak: "Slovak",
+  Slovenian: "Slovenian",
+  Swedish: "Swedish",
+  Tamil: "Tamil",
+  Telugu: "Telugu",
+  Thai: "Thai",
+  Turkish: "Turkish",
+  Ukrainian: "Ukrainian",
+  Vietnamese: "Vietnamese",
 };
 export const officialDictList = [
   { lang: "English", code: "eng", nativeLang: "English" },
@@ -313,18 +387,22 @@ export const officialDictList = [
 export const sampleQuestion = [
   {
     mode: "ask",
+    emoji: "📖",
     question: "Summarize this chapter for me",
   },
   {
     mode: "ask",
+    emoji: "📃",
     question: "What are the key points of this chapter",
   },
   {
     mode: "chat",
+    emoji: "📰",
     question: "Recommend me some books from Colleen Hoover",
   },
   {
     mode: "chat",
+    emoji: "🗞️",
     question: "Explain Stoicism and its principles to me",
   },
 ];

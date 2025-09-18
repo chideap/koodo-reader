@@ -137,7 +137,7 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
               "shelfList"
             );
           }
-          toast.success(this.props.t("Addition successful"));
+          toast.success(this.props.t("Addition successful") + ": " + book.name);
           setTimeout(() => {
             this.state.isOpenFile && this.handleJump(book);
             if (
@@ -153,8 +153,10 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
           return resolve();
         })
         .catch((error) => {
-          console.error(error);
-          toast.error(this.props.t("Import failed"));
+          console.error(error, book.name);
+          toast.error(this.props.t("Import failed") + ": " + book.name, {
+            duration: 4000,
+          });
           return resolve();
         });
     });
@@ -181,8 +183,10 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
     return new Promise<void>(async (resolve) => {
       const md5 = await calculateFileMD5(file);
       if (!md5) {
-        console.error("md5 error");
-        toast.error(this.props.t("Import failed"));
+        console.error("md5 error", file.name);
+        toast.error(this.props.t("Import failed") + ": " + file.name, {
+          duration: 4000,
+        });
         return resolve();
       } else {
         try {
@@ -240,8 +244,10 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
 
         reader.onload = async (e) => {
           if (!e.target) {
-            console.error("e.target error");
-            toast.error(this.props.t("Import failed"));
+            console.error("e.target error", bookName);
+            toast.error(this.props.t("Import failed") + ": " + bookName, {
+              duration: 4000,
+            });
             return resolve();
           }
           let reader = new FileReader();
@@ -264,6 +270,7 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                   isDarkMode: "no",
                   isMobile: "no",
                   password: "",
+                  isScannedPDF: "no",
                 },
                 Kookit
               );
@@ -286,7 +293,10 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                 }
               }
             } catch (error) {
-              console.error(error);
+              console.error(error, bookName);
+              toast.error(this.props.t("Import failed") + ": " + bookName, {
+                duration: 4000,
+              });
               return resolve();
             }
 
@@ -294,8 +304,10 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
 
             // get metadata failed
             if (!result || !result.key) {
-              console.error("get metadata failed");
-              toast.error(this.props.t("Import failed"));
+              console.error("get metadata failed", bookName);
+              toast.error(this.props.t("Import failed") + ": " + bookName, {
+                duration: 4000,
+              });
               return resolve();
             }
             await this.handleAddBook(
@@ -351,141 +363,160 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                 : {}
             }
           >
-            <div
-              className="more-import-option"
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent triggering the Dropzone
-                this.toggleMoreOptions();
-              }}
-            >
-              <span className="dropdown-triangle"></span>
-              {this.state.isMoreOptionsVisible && (
-                <div className="more-options-dropdown">
+            {this.props.isCollapsed && this.state.width < 950 ? null : (
+              <div
+                className="more-import-option"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent triggering the Dropzone
+                  this.toggleMoreOptions();
+                }}
+              >
+                <span className="dropdown-triangle"></span>
+                {this.state.isMoreOptionsVisible && (
                   <div
-                    className="more-option-item"
-                    onClick={async (event) => {
-                      event.stopPropagation(); // Prevent triggering the Dropzone
-                      //select folder from local
-                      if (isElectron) {
-                        const { ipcRenderer } = window.require("electron");
-                        const newPath = await ipcRenderer.invoke("select-path");
-                        if (!newPath) {
-                          return;
-                        }
-                        //get all files in the folder
-                        const fs = window.require("fs");
-                        const path = window.require("path");
-                        const getAllFiles = (dirPath: string): string[] => {
-                          let files: string[] = [];
-
-                          try {
-                            const items = fs.readdirSync(dirPath);
-
-                            for (const item of items) {
-                              const fullPath = path.join(dirPath, item);
-                              const stat = fs.statSync(fullPath);
-
-                              if (stat.isDirectory()) {
-                                // Recursively get files from subdirectories
-                                files = files.concat(getAllFiles(fullPath));
-                              } else if (stat.isFile()) {
-                                // Check if file has supported format
-                                const ext = path
-                                  .extname(item)
-                                  .toLowerCase()
-                                  .substring(1);
-                                if (supportedFormats.includes(`.${ext}`)) {
-                                  files.push(fullPath);
-                                }
-                              }
-                            }
-                          } catch (error) {
-                            console.error(
-                              `Error reading directory ${dirPath}:`,
-                              error
-                            );
+                    className="more-options-dropdown"
+                    onMouseLeave={this.toggleMoreOptions}
+                    style={
+                      this.state.width < 950
+                        ? {
+                            bottom: "calc(100% + 5px)",
+                            top: "unset",
+                            right: "unset",
+                            left: "-110px",
                           }
-
-                          return files;
-                        };
-
-                        // Get all supported book files
-                        const allFiles = getAllFiles(newPath);
-                        // Process each file
-                        for (const filePath of allFiles) {
-                          try {
-                            const buffer = await fs.promises.readFile(filePath);
-                            const arraybuffer = new Uint8Array(buffer).buffer;
-                            const blob = new Blob([arraybuffer]);
-                            const fileName = path.basename(filePath);
-
-                            let file: any = new File([blob], fileName);
-                            file.path = filePath;
-
-                            await this.getMd5WithBrowser(file);
-                          } catch (error) {
-                            console.error(
-                              `Error processing file ${filePath}:`,
-                              error
-                            );
-                          }
-                        }
-
-                        this.setState({ isMoreOptionsVisible: false });
-                      }
-                    }}
+                        : {}
+                    }
                   >
-                    <span className="more-option-text">
-                      <Trans>Import folder</Trans>
-                    </span>
-                    {!isElectron && (
-                      <input
-                        type="file"
-                        {...({
-                          webkitdirectory: "",
-                          mozdirectory: "",
-                          directory: "",
-                        } as React.InputHTMLAttributes<HTMLInputElement>)}
-                        multiple
-                        style={{
-                          position: "absolute",
-                          width: "100%",
-                          height: "45px",
-                          opacity: 0,
-                          marginLeft: "-20px",
-                          cursor: "pointer",
-                        }}
-                        onChange={async (e) => {
-                          const files = e.target.files;
-                          if (!files || files.length === 0) {
+                    <div
+                      className="more-option-item"
+                      onClick={async (event) => {
+                        event.stopPropagation(); // Prevent triggering the Dropzone
+                        //select folder from local
+                        if (isElectron) {
+                          const { ipcRenderer } = window.require("electron");
+                          const newPath = await ipcRenderer.invoke(
+                            "select-path"
+                          );
+                          if (!newPath) {
                             return;
                           }
-                          for (let item of files) {
-                            if (
-                              !supportedFormats.find((format) =>
-                                item.name.toLowerCase().endsWith(format)
-                              )
-                            ) {
-                              continue;
+                          //get all files in the folder
+                          const fs = window.require("fs");
+                          const path = window.require("path");
+                          const getAllFiles = (dirPath: string): string[] => {
+                            let files: string[] = [];
+
+                            try {
+                              const items = fs.readdirSync(dirPath);
+
+                              for (const item of items) {
+                                const fullPath = path.join(dirPath, item);
+                                const stat = fs.statSync(fullPath);
+
+                                if (stat.isDirectory()) {
+                                  // Recursively get files from subdirectories
+                                  files = files.concat(getAllFiles(fullPath));
+                                } else if (stat.isFile()) {
+                                  // Check if file has supported format
+                                  const ext = path
+                                    .extname(item)
+                                    .toLowerCase()
+                                    .substring(1);
+                                  if (supportedFormats.includes(`.${ext}`)) {
+                                    files.push(fullPath);
+                                  }
+                                }
+                              }
+                            } catch (error) {
+                              console.error(
+                                `Error reading directory ${dirPath}:`,
+                                error
+                              );
                             }
-                            await this.getMd5WithBrowser(item);
+
+                            return files;
+                          };
+
+                          // Get all supported book files
+                          const allFiles = getAllFiles(newPath);
+                          // Process each file
+                          for (const filePath of allFiles) {
+                            try {
+                              const buffer = await fs.promises.readFile(
+                                filePath
+                              );
+                              const arraybuffer = new Uint8Array(buffer).buffer;
+                              const blob = new Blob([arraybuffer]);
+                              const fileName = path.basename(filePath);
+
+                              let file: any = new File([blob], fileName);
+                              file.path = filePath;
+
+                              await this.getMd5WithBrowser(file);
+                            } catch (error) {
+                              console.error(
+                                `Error processing file ${filePath}:`,
+                                error
+                              );
+                            }
                           }
-                          this.toggleMoreOptions();
-                        }}
-                      ></input>
-                    )}
+
+                          this.setState({ isMoreOptionsVisible: false });
+                        }
+                      }}
+                    >
+                      <span className="more-option-text">
+                        <Trans>Import folder</Trans>
+                      </span>
+                      {!isElectron && (
+                        <input
+                          type="file"
+                          {...({
+                            webkitdirectory: "",
+                            mozdirectory: "",
+                            directory: "",
+                          } as React.InputHTMLAttributes<HTMLInputElement>)}
+                          multiple
+                          style={{
+                            position: "absolute",
+                            width: "100%",
+                            height: "45px",
+                            opacity: 0,
+                            marginLeft: "-20px",
+                            cursor: "pointer",
+                          }}
+                          onChange={async (e) => {
+                            const files = e.target.files;
+                            if (!files || files.length === 0) {
+                              return;
+                            }
+                            for (let item of files) {
+                              if (
+                                !supportedFormats.find((format) =>
+                                  item.name.toLowerCase().endsWith(format)
+                                )
+                              ) {
+                                continue;
+                              }
+                              await this.getMd5WithBrowser(item);
+                            }
+                            this.toggleMoreOptions();
+                          }}
+                        ></input>
+                      )}
+                    </div>
+                    <div
+                      className="more-option-item"
+                      onClick={this.handleCloudImport}
+                    >
+                      <span className="more-option-text">
+                        <Trans>From cloud storage</Trans>
+                      </span>
+                    </div>
                   </div>
-                  <div
-                    className="more-option-item"
-                    onClick={this.handleCloudImport}
-                  >
-                    <span className="more-option-text">
-                      <Trans>From cloud storage</Trans>
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
             <div className="animation-mask-local"></div>
             {this.props.isCollapsed && this.state.width < 950 ? (
               <span

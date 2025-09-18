@@ -3,6 +3,7 @@ import "./popupMenu.css";
 import PopupOption from "../popupOption";
 import { PopupMenuProps, PopupMenuStates } from "./interface";
 import { getIframeDoc } from "../../../utils/reader/docUtil";
+import { ConfigService } from "../../../assets/lib/kookit-extra-browser.min";
 
 class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
   highlighter: any;
@@ -61,11 +62,19 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
       posX = rect.left + rect.width;
     }
     if (
-      this.props.rendition.getPageSize().height - rect.height < 188 &&
-      this.props.rendition.getPageSize().height - rect.height > 0
+      rect.top < 188 &&
+      this.props.rendition.getPageSize().height - rect.top - rect.height <
+        188 &&
+      this.props.readerMode !== "scroll"
     ) {
       this.props.handleChangeDirection(true);
       posY = rect.top + 16 + this.props.rendition.getPageSize().top;
+    } else if (
+      this.props.rendition.getPageSize().height - rect.height < 188 &&
+      this.props.rendition.getPageSize().height - rect.height > -10
+    ) {
+      this.props.handleChangeDirection(true);
+      posY = rect.top - this.props.rendition.getPageSize().scrollTop + 16;
     } else if (
       rect.height - this.props.rendition.getPageSize().height > 0 &&
       this.props.readerMode === "scroll"
@@ -86,7 +95,8 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
     if (
       this.props.currentBook.format === "PDF" &&
       this.props.readerMode === "double" &&
-      this.props.chapterDocIndex % 2 === 1
+      this.props.chapterDocIndex % 2 === 1 &&
+      ConfigService.getReaderConfig("isConvertPDF") !== "yes"
     ) {
       posX =
         posX +
@@ -95,12 +105,20 @@ class PopupMenu extends React.Component<PopupMenuProps, PopupMenuStates> {
     }
     if (
       this.props.currentBook.format === "PDF" &&
-      this.props.readerMode === "scroll"
+      this.props.readerMode === "scroll" &&
+      ConfigService.getReaderConfig("isConvertPDF") !== "yes" &&
+      posY < 0
     ) {
       posY =
         posY +
         this.props.chapterDocIndex *
           this.props.rendition.getPageSize().sectionHeight;
+    }
+    if (posY < 0) {
+      posY = 16;
+    }
+    if (posY > this.props.rendition.getPageSize().height - 188) {
+      posY = this.props.rendition.getPageSize().height - 188;
     }
     return { posX, posY } as any;
   }

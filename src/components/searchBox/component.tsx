@@ -41,6 +41,9 @@ class SearchBox extends React.Component<SearchBoxProps, SearchBoxState> {
     if (results) {
       this.props.handleSearchResults(results);
       this.props.handleSearch(true);
+      if (this.props.mode === "nav") {
+        this.props.handleNavSearchState("done");
+      }
     }
   };
   handleKey = (event: any) => {
@@ -67,6 +70,9 @@ class SearchBox extends React.Component<SearchBoxProps, SearchBoxState> {
     if (results) {
       this.props.handleSearchResults(results);
       this.props.handleSearch(true);
+      if (this.props.mode === "nav") {
+        this.props.handleNavSearchState("done");
+      }
     }
   };
   search = async (q: string) => {
@@ -82,11 +88,13 @@ class SearchBox extends React.Component<SearchBoxProps, SearchBoxState> {
         return item;
       })
     );
+    this.props.handleNavSearchState("done");
   };
 
   handleCancel = () => {
     if (this.props.isNavSearch) {
       this.props.handleSearchList(null);
+      this.props.handleNavSearchState("done");
     }
     this.props.handleSearch(false);
     (document.querySelector(".header-search-box") as HTMLInputElement).value =
@@ -105,8 +113,10 @@ class SearchBox extends React.Component<SearchBoxProps, SearchBoxState> {
           }}
           onFocus={() => {
             this.setState({ isFocused: true });
-            this.props.mode === "nav" &&
+
+            if (this.props.mode === "nav") {
               this.props.handleNavSearchState("focused");
+            }
           }}
           placeholder={
             this.props.isNavSearch || this.props.mode === "nav"
@@ -127,6 +137,9 @@ class SearchBox extends React.Component<SearchBoxProps, SearchBoxState> {
               : {}
           }
           onCompositionStart={() => {
+            if (this.props.mode === "nav") {
+              this.props.handleNavSearchState("focused");
+            }
             if (this.props.isNavLocked) {
               return;
             } else {

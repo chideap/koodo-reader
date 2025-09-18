@@ -22,28 +22,16 @@ class SettingDialog extends React.Component<
   constructor(props: SettingInfoProps) {
     super(props);
     this.state = {
-      isTouch: ConfigService.getReaderConfig("isTouch") === "yes",
-      isMergeWord: ConfigService.getReaderConfig("isMergeWord") === "yes",
       isPreventTrigger:
         ConfigService.getReaderConfig("isPreventTrigger") === "yes",
-      isAutoFullscreen:
-        ConfigService.getReaderConfig("isAutoFullscreen") === "yes",
       isPreventAdd: ConfigService.getReaderConfig("isPreventAdd") === "yes",
-      isLemmatizeWord:
-        ConfigService.getReaderConfig("isLemmatizeWord") === "yes",
       isOpenBook: ConfigService.getReaderConfig("isOpenBook") === "yes",
-      isExpandContent:
-        ConfigService.getReaderConfig("isExpandContent") === "yes",
       isDisablePopup: ConfigService.getReaderConfig("isDisablePopup") === "yes",
-      isDisableTrashBin:
-        ConfigService.getReaderConfig("isDisableTrashBin") === "yes",
       isDeleteShelfBook:
         ConfigService.getReaderConfig("isDeleteShelfBook") === "yes",
       isHideShelfBook:
         ConfigService.getReaderConfig("isHideShelfBook") === "yes",
       isOpenInMain: ConfigService.getReaderConfig("isOpenInMain") === "yes",
-      isDisableUpdate:
-        ConfigService.getReaderConfig("isDisableUpdate") === "yes",
       isPrecacheBook: ConfigService.getReaderConfig("isPrecacheBook") === "yes",
       appSkin: ConfigService.getReaderConfig("appSkin"),
       isUseBuiltIn: ConfigService.getReaderConfig("isUseBuiltIn") === "yes",
@@ -187,7 +175,9 @@ class SettingDialog extends React.Component<
                         ? "dict"
                         : item.type === "voice"
                         ? "speaker"
-                        : "translation"
+                        : item.type === "translation"
+                        ? "translation"
+                        : "ai-assist"
                     } setting-plugin-icon`}
                   ></span>
                   <span className="setting-plugin-name">

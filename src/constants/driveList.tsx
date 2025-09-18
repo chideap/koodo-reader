@@ -18,6 +18,24 @@ export const driveList = [
     isCNAvailable: false,
   },
   {
+    label: "Dubox",
+    value: "dubox",
+    icon: "icon-dubox",
+    isPro: true,
+    support: ["desktop", "phone"],
+    scoped: false,
+    isCNAvailable: true,
+  },
+  {
+    label: "115 Yun",
+    value: "yiyiwu",
+    icon: "icon-yiyiwu",
+    isPro: true,
+    support: ["desktop", "phone"],
+    scoped: false,
+    isCNAvailable: true,
+  },
+  {
     label: "OneDrive",
     value: "microsoft",
     icon: "icon-onedrive",
@@ -32,7 +50,7 @@ export const driveList = [
     icon: "icon-googledrive",
     isPro: true,
     support: ["desktop", "browser", "phone"],
-    scoped: true,
+    scoped: false,
     isCNAvailable: false,
   },
   {
@@ -72,22 +90,13 @@ export const driveList = [
     isCNAvailable: true,
   },
   {
-    label: "OneDrive (Experimental)",
+    label: "OneDrive (full access)",
     value: "microsoft_exp",
     icon: "icon-onedrive",
     isPro: true,
     support: ["desktop", "browser", "phone"],
     scoped: false,
     isCNAvailable: true,
-  },
-  {
-    label: "Google Drive (Experimental)",
-    value: "google_exp",
-    icon: "icon-googledrive",
-    isPro: true,
-    support: ["desktop", "browser", "phone"],
-    scoped: false,
-    isCNAvailable: false,
   },
   {
     label: "S3 Compatible",
@@ -344,14 +353,6 @@ export const driveInputConfig: DriveInputConfig = {
       required: true,
     },
   ],
-  google_exp: [
-    {
-      label: "Token",
-      value: "token",
-      type: "text",
-      required: true,
-    },
-  ],
   microsoft_exp: [
     {
       label: "Token",
@@ -361,6 +362,22 @@ export const driveInputConfig: DriveInputConfig = {
     },
   ],
   dropbox: [
+    {
+      label: "Token",
+      value: "token",
+      type: "text",
+      required: true,
+    },
+  ],
+  dubox: [
+    {
+      label: "Token",
+      value: "token",
+      type: "text",
+      required: true,
+    },
+  ],
+  yiyiwu: [
     {
       label: "Token",
       value: "token",

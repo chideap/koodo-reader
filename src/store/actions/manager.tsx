@@ -11,6 +11,8 @@ import {
   officialDictList,
   officialTranList,
 } from "../../constants/settingList";
+import toast from "react-hot-toast";
+import i18n from "../../i18n";
 
 export function handleBooks(books: BookModel[]) {
   return { type: "HANDLE_BOOKS", payload: books };
@@ -48,6 +50,7 @@ export function handleSettingDrive(settingDrive: string) {
 export function handleAbout(isAboutOpen: boolean) {
   return { type: "HANDLE_ABOUT", payload: isAboutOpen };
 }
+
 export function handleViewMode(mode: string) {
   return { type: "HANDLE_VIEW_MODE", payload: mode };
 }
@@ -78,9 +81,6 @@ export function handleBookSort(isBookSort: boolean) {
 }
 export function handleNoteSort(isNoteSort: boolean) {
   return { type: "HANDLE_NOTE_SORT", payload: isNoteSort };
-}
-export function handleFeedbackDialog(mode: boolean) {
-  return { type: "HANDLE_FEEDBACK_DIALOG", payload: mode };
 }
 export function handleAuthed(isAuthed: boolean) {
   return { type: "HANDLE_AUTHED", payload: isAuthed };

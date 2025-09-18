@@ -12,8 +12,13 @@ import {
 } from "../../../constants/settingList";
 import { themeList } from "../../../constants/themeList";
 import toast from "react-hot-toast";
-import { openExternalUrl } from "../../../utils/common";
-import { getStorageLocation } from "../../../utils/common";
+import {
+  clearAllData,
+  generateSyncRecord,
+  getStorageLocation,
+  reloadManager,
+  vexPromptAsync,
+} from "../../../utils/common";
 import { ConfigService } from "../../../assets/lib/kookit-extra-browser.min";
 import { LocalFileManager } from "../../../utils/file/localFile";
 
@@ -33,11 +38,7 @@ class GeneralSetting extends React.Component<
       isAutoFullscreen:
         ConfigService.getReaderConfig("isAutoFullscreen") === "yes",
       isPreventAdd: ConfigService.getReaderConfig("isPreventAdd") === "yes",
-      isLemmatizeWord:
-        ConfigService.getReaderConfig("isLemmatizeWord") === "yes",
       isOpenBook: ConfigService.getReaderConfig("isOpenBook") === "yes",
-      isExpandContent:
-        ConfigService.getReaderConfig("isExpandContent") === "yes",
       isDisablePopup: ConfigService.getReaderConfig("isDisablePopup") === "yes",
       isDisableTrashBin:
         ConfigService.getReaderConfig("isDisableTrashBin") === "yes",
@@ -47,8 +48,12 @@ class GeneralSetting extends React.Component<
         ConfigService.getReaderConfig("isHideShelfBook") === "yes",
       isPreventSleep: ConfigService.getReaderConfig("isPreventSleep") === "yes",
       isAlwaysOnTop: ConfigService.getReaderConfig("isAlwaysOnTop") === "yes",
+      isAutoMaximizeWin:
+        ConfigService.getReaderConfig("isAutoMaximizeWin") === "yes",
       isAutoLaunch: ConfigService.getReaderConfig("isAutoLaunch") === "yes",
       isOpenInMain: ConfigService.getReaderConfig("isOpenInMain") === "yes",
+      isExportOriginalName:
+        ConfigService.getReaderConfig("isExportOriginalName") === "yes",
       isDisableUpdate:
         ConfigService.getReaderConfig("isDisableUpdate") === "yes",
       isPrecacheBook: ConfigService.getReaderConfig("isPrecacheBook") === "yes",
@@ -88,9 +93,6 @@ class GeneralSetting extends React.Component<
   };
   changeSearch = (searchEngine: string) => {
     ConfigService.setReaderConfig("searchEngine", searchEngine);
-  };
-  handleJump = (url: string) => {
-    openExternalUrl(url);
   };
   handleSetting = (stateName: string) => {
     this.setState({ [stateName]: !this.state[stateName] } as any);
@@ -132,6 +134,10 @@ class GeneralSetting extends React.Component<
       this.setState({ storageLocation: newPath });
       toast.success(this.props.t("Switch successful"));
       this.props.handleFetchBooks();
+      await generateSyncRecord();
+      setTimeout(() => {
+        this.props.history.push("/manager/home");
+      }, 2000);
     } else {
       try {
         const directoryHandle = await LocalFileManager.requestDirectoryAccess();
@@ -190,6 +196,13 @@ class GeneralSetting extends React.Component<
     });
     this.handleSetting("isAlwaysOnTop");
   };
+  handleMaximizeWin = () => {
+    const { ipcRenderer } = window.require("electron");
+    ipcRenderer.invoke("set-auto-maximize", {
+      isAutoMaximizeWin: this.state.isAutoMaximizeWin ? "no" : "yes",
+    });
+    this.handleSetting("isAutoMaximizeWin");
+  };
   handleAutoLaunch = () => {
     const { ipcRenderer } = window.require("electron");
     ipcRenderer.invoke("toggle-auto-launch", {
@@ -221,6 +234,9 @@ class GeneralSetting extends React.Component<
                     break;
                   case "isAlwaysOnTop":
                     this.handleAlwaysOnTop();
+                    break;
+                  case "isAutoMaximizeWin":
+                    this.handleMaximizeWin();
                     break;
                   case "isAutoLaunch":
                     this.handleAutoLaunch();
@@ -255,6 +271,12 @@ class GeneralSetting extends React.Component<
       );
     });
   };
+  handleResetMainPosition = () => {
+    window
+      .require("electron")
+      .ipcRenderer.invoke("reset-main-position", "ping");
+    toast.success(this.props.t("Reset successful"));
+  };
   render() {
     return (
       <>
@@ -269,8 +291,11 @@ class GeneralSetting extends React.Component<
                 <span
                   className="change-location-button"
                   onClick={() => {
-                    const { shell } = window.require("electron");
-                    shell.openPath(this.state.storageLocation);
+                    const { ipcRenderer } = window.require("electron");
+                    ipcRenderer.invoke("open-explorer-folder", {
+                      path: this.state.storageLocation,
+                      isFolder: true,
+                    });
                   }}
                   style={{ marginRight: "10px" }}
                 >
@@ -307,8 +332,11 @@ class GeneralSetting extends React.Component<
                   <span
                     className="change-location-button"
                     onClick={() => {
-                      const { shell } = window.require("electron");
-                      shell.openPath(this.state.storageLocation);
+                      const { ipcRenderer } = window.require("electron");
+                      ipcRenderer.invoke("open-explorer-folder", {
+                        path: this.state.storageLocation,
+                        isFolder: true,
+                      });
                     }}
                     style={{ marginRight: "10px" }}
                   >
@@ -337,7 +365,18 @@ class GeneralSetting extends React.Component<
             </div>
           </>
         )}
+        <div className="setting-dialog-new-title">
+          <Trans>Reset main window's position</Trans>
 
+          <span
+            className="change-location-button"
+            onClick={() => {
+              this.handleResetMainPosition();
+            }}
+          >
+            <Trans>Reset</Trans>
+          </span>
+        </div>
         <div className="setting-dialog-new-title">
           <Trans>Select update channel</Trans>
           <select
@@ -419,6 +458,31 @@ class GeneralSetting extends React.Component<
               </option>
             ))}
           </select>
+        </div>
+        <div className="setting-dialog-new-title">
+          <Trans>Clear all data</Trans>
+          <span
+            className="change-location-button"
+            onClick={async () => {
+              let answer = await vexPromptAsync(
+                this.props.t("Please type 'CLEAR' to confirm"),
+                "",
+                ""
+              );
+              window.vex.closeAll(); // 关闭对话框
+              if (answer === "CLEAR") {
+                await clearAllData();
+                toast.success(this.props.t("Clear successful"));
+                setTimeout(() => {
+                  reloadManager();
+                }, 300);
+              } else {
+                toast.error(this.props.t("Please type 'CLEAR' to confirm"));
+              }
+            }}
+          >
+            <Trans>Clear</Trans>
+          </span>
         </div>
       </>
     );

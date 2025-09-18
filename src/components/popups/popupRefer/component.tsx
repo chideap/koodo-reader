@@ -2,7 +2,11 @@ import React from "react";
 import "./popupRefer.css";
 import { PopupReferProps, PopupReferStates } from "./interface";
 import { getIframeDoc } from "../../../utils/reader/docUtil";
-import { getTargetHref, openExternalUrl } from "../../../utils/common";
+import {
+  getTargetHref,
+  openExternalUrl,
+  processHtml,
+} from "../../../utils/common";
 import Parser from "html-react-parser";
 import { ConfigService } from "../../../assets/lib/kookit-extra-browser.min";
 
@@ -46,11 +50,83 @@ class PopupRefer extends React.Component<PopupReferProps, PopupReferStates> {
     }
     this.handleLinkJump(event, this.props.rendition);
   };
+  handleShowMenu = async (node, targetElement, rect) => {
+    if (
+      (node.textContent.trim() === targetElement.textContent.trim() ||
+        !node.textContent.trim() ||
+        "[" + node.textContent.trim() + "]" ===
+          targetElement.textContent.trim() ||
+        node.textContent.trim() ===
+          "[" + targetElement.textContent.trim() + "]") &&
+      node.parentElement
+    ) {
+      if (node.parentElement.tagName !== "BODY") {
+        node = node.parentElement;
+      } else {
+        return false;
+      }
+    }
+    let htmlContent = node.innerHTML;
+    //将html代码中的img标签由blob转换为base64
+
+    htmlContent = await processHtml(htmlContent);
+    this.setState(
+      {
+        rect: rect,
+        footnote: htmlContent,
+        isOpenMenu: true,
+      },
+      () => {
+        this.showMenu();
+      }
+    );
+  };
   handleLinkJump = async (
     event: any,
     rendition: any = {}
   ): Promise<boolean> => {
     let href = getTargetHref(event);
+
+    if (href && href.startsWith("kindle:")) {
+      let chapterInfo = rendition.resolveChapter(href);
+      if (chapterInfo) {
+        await rendition.goToChapter(
+          chapterInfo.index,
+          chapterInfo.href,
+          chapterInfo.label
+        );
+        return true;
+      }
+      let result = await this.props.rendition.resolveHref(href);
+      if (!result.anchor) {
+        return false;
+      }
+      let currentPosition = rendition.getPosition();
+      if (result.index === parseInt(currentPosition.chapterDocIndex)) {
+        let doc = getIframeDoc(this.props.currentBook.format)[0];
+        let node = result.anchor(doc);
+        if (node) {
+          href = "#" + node.getAttribute("id");
+        }
+      } else {
+        this.setState({
+          isJump: true,
+          returnPosition: ConfigService.getObjectConfig(
+            this.props.currentBook.key,
+            "recordLocation",
+            {}
+          ),
+        });
+        let rect = event.target.getBoundingClientRect();
+        await rendition.goToChapterDocIndex(result.index);
+        let doc = getIframeDoc(this.props.currentBook.format)[0];
+        let node = result.anchor(doc);
+        await rendition.goToNode(node);
+        await this.handleShowMenu(node, event.target, rect);
+        return true;
+      }
+    }
+
     if (href && href.indexOf("#") > -1) {
       let pageArea = document.getElementById("page-area");
       if (!pageArea) return false;
@@ -64,9 +140,22 @@ class PopupRefer extends React.Component<PopupReferProps, PopupReferStates> {
       if (href.indexOf("#") > -1) {
         let id = href.split("#").reverse()[0];
         let node = doc.body.querySelector("#" + CSS.escape(id));
+        let rect = event.target.getBoundingClientRect();
         if (!node) {
+          if (href.indexOf("filepos") > -1) {
+            let chapterInfo = rendition.resolveChapter(href);
+            await rendition.goToChapter(
+              chapterInfo.index,
+              chapterInfo.href,
+              chapterInfo.label
+            );
+            return true;
+          }
           //can't find the node, go to href
           if (href.indexOf("#") !== 0) {
+            while (href.startsWith(".")) {
+              href = href.substring(1);
+            }
             let chapterInfo = rendition.resolveChapter(href.split("#")[0]);
             await rendition.goToChapter(
               chapterInfo.index,
@@ -74,58 +163,23 @@ class PopupRefer extends React.Component<PopupReferProps, PopupReferStates> {
               chapterInfo.label
             );
           }
-          await rendition.goToNode(
-            doc.body.querySelector("#" + CSS.escape(id)) || doc.body
-          );
-          return true;
-        }
-        //将html代码中的img标签由blob转换为base64
-        if (node.textContent.trim() === event.target.textContent.trim()) {
-          node = node.parentElement;
-        }
-        let htmlContent = node.innerHTML;
-
-        const convertBlobToDataURL = async (blobUrl) => {
-          const response = await fetch(blobUrl);
-          const blob = await response.blob();
-          return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
+          node = doc.body.querySelector("#" + CSS.escape(id));
+          if (!node) {
+            return false;
+          }
+          this.setState({
+            isJump: true,
+            returnPosition: ConfigService.getObjectConfig(
+              this.props.currentBook.key,
+              "recordLocation",
+              {}
+            ),
           });
-        };
-
-        const processHtml = async (html) => {
-          const parser = new DOMParser();
-          const doc = parser.parseFromString(html, "text/html");
-          const images: any[] = Array.from(doc.getElementsByTagName("img"));
-          for (const img of images) {
-            if (img.src && img.src.startsWith("blob:")) {
-              try {
-                const dataUrl = await convertBlobToDataURL(img.src);
-                img.src = dataUrl;
-                img.style.maxWidth = "100%"; // 确保图片不会超出容器宽度
-              } catch (error) {
-                console.error("Error converting blob to data URL:", error);
-              }
-            }
-          }
-          return doc.body.innerHTML;
-        };
-
-        htmlContent = await processHtml(htmlContent);
-        this.setState(
-          {
-            rect: event.target.getBoundingClientRect(),
-            footnote: htmlContent,
-            isOpenMenu: true,
-          },
-          () => {
-            this.showMenu();
-          }
-        );
-
+          await rendition.goToNode(
+            doc.body.querySelector("#" + CSS.escape(id))
+          );
+        }
+        await this.handleShowMenu(node, event.target, rect);
         return true;
       }
     } else if (
@@ -188,7 +242,8 @@ class PopupRefer extends React.Component<PopupReferProps, PopupReferStates> {
     if (
       this.props.currentBook.format === "PDF" &&
       this.props.readerMode === "double" &&
-      this.props.chapterDocIndex % 2 === 1
+      this.props.chapterDocIndex % 2 === 1 &&
+      ConfigService.getReaderConfig("isConvertPDF") !== "yes"
     ) {
       posX =
         posX +
@@ -197,7 +252,8 @@ class PopupRefer extends React.Component<PopupReferProps, PopupReferStates> {
     }
     if (
       this.props.currentBook.format === "PDF" &&
-      this.props.readerMode === "scroll"
+      this.props.readerMode === "scroll" &&
+      ConfigService.getReaderConfig("isConvertPDF") !== "yes"
     ) {
       posY =
         posY +
@@ -252,7 +308,11 @@ class PopupRefer extends React.Component<PopupReferProps, PopupReferStates> {
                     await this.props.rendition.goToPosition(
                       JSON.stringify(this.state.returnPosition)
                     );
-                    this.setState({ isJump: false, returnPosition: null });
+                    this.setState({
+                      isJump: false,
+                      returnPosition: null,
+                      isOpenMenu: false,
+                    });
                     return;
                   }
                   let pageArea = document.getElementById("page-area");

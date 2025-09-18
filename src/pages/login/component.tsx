@@ -1,18 +1,20 @@
 import React from "react";
 import { LoginProps, LoginState } from "./interface";
 import { Trans } from "react-i18next";
-import { getLoginParamsFromUrl, upgradePro } from "../../utils/file/common";
+import { getLoginParamsFromUrl } from "../../utils/file/common";
 import { withRouter } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { loginList } from "../../constants/loginList";
 import {
+  generateSyncRecord,
   handleContextMenu,
-  openExternalUrl,
+  openInBrowser,
   removeSearchParams,
 } from "../../utils/common";
 import {
   CommonTool,
   ConfigService,
+  KookitConfig,
   LoginHelper,
 } from "../../assets/lib/kookit-extra-browser.min";
 import { isElectron } from "react-device-detect";
@@ -65,6 +67,21 @@ class Login extends React.Component<LoginProps, LoginState> {
       }
     }
   }
+  UNSAFE_componentWillReceiveProps(
+    nextProps: Readonly<LoginProps>,
+    nextContext: any
+  ): void {
+    if (
+      nextProps.isShowSupport &&
+      nextProps.isShowSupport !== this.props.isShowSupport
+    ) {
+      toast(
+        this.props.t(
+          "Your Pro trial has expired, please renew it to continue using the Pro features"
+        )
+      );
+    }
+  }
   handleLogin = async (code: string, service: string) => {
     this.props.handleLoadingDialog(true);
     let res = await loginRegister(service, code);
@@ -77,11 +94,12 @@ class Login extends React.Component<LoginProps, LoginState> {
       this.props.handleFetchDefaultSyncOption();
       removeSearchParams();
       this.props.handleFetchAuthed();
+      await this.props.handleFetchUserInfo();
       this.setState({ currentStep: 3 });
       if (ConfigService.getReaderConfig("isProUpgraded") !== "yes") {
         try {
           ConfigService.setReaderConfig("isProUpgraded", "yes");
-          await upgradePro();
+          await generateSyncRecord();
         } catch (error) {
           console.error(error);
         }
@@ -347,11 +365,15 @@ class Login extends React.Component<LoginProps, LoginState> {
                             }
                             let url = LoginHelper.getAuthUrl(
                               item.value,
-                              isElectron ? "desktop" : "browser"
+                              isElectron ? "desktop" : "browser",
+                              ConfigService.getItem("serverRegion") ===
+                                "china" && item.value === "microsoft"
+                                ? KookitConfig.ThirdpartyConfig.cnCallbackUrl
+                                : KookitConfig.ThirdpartyConfig.callbackUrl
                             );
                             if (url) {
                               if (isElectron) {
-                                openExternalUrl(url);
+                                openInBrowser(url);
                               } else {
                                 window.location.replace(url);
                               }
@@ -465,7 +487,8 @@ class Login extends React.Component<LoginProps, LoginState> {
                           ConfigService.getReaderConfig("lang").startsWith(
                             "zh"
                           ) &&
-                          item.value === "webdav" && (
+                          item.value === "webdav" &&
+                          isElectron && (
                             <div className="login-sync-text">
                               {this.props.t("Recommended (use with Nutstore)")}
                             </div>
@@ -553,7 +576,12 @@ class Login extends React.Component<LoginProps, LoginState> {
               </div>
               <div className="login-mobile-container">
                 <img
-                  src={require("../../assets/images/mobile-qr.png")}
+                  src={
+                    ConfigService.getReaderConfig("lang") &&
+                    ConfigService.getReaderConfig("lang").startsWith("zh")
+                      ? require("../../assets/images/mobile-qr-zh.png")
+                      : require("../../assets/images/mobile-qr.png")
+                  }
                   alt="logo"
                   className="login-mobile-qr"
                   style={{
@@ -630,6 +658,16 @@ class Login extends React.Component<LoginProps, LoginState> {
                     }}
                     onContextMenu={() => {
                       handleContextMenu("token-dialog-email-box", true);
+                    }}
+                    onBlur={(e) => {
+                      const email = e.target.value.trim();
+                      if (email) {
+                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                        if (email && !emailRegex.test(email)) {
+                          toast.error(this.props.t("Invalid email format"));
+                          return;
+                        }
+                      }
                     }}
                     id={"token-dialog-email-box"}
                     className="login-input-container"
@@ -750,7 +788,7 @@ class Login extends React.Component<LoginProps, LoginState> {
                       marginTop: "10px",
                     }}
                   >
-                    {this.props.t("Log in")}
+                    {this.props.t("Continue")}
                   </div>
                   <div className="login-term">
                     {this.props.t(

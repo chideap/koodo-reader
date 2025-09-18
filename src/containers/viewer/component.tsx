@@ -26,6 +26,7 @@ import {
 } from "../../assets/lib/kookit-extra-browser.min";
 import * as Kookit from "../../assets/lib/kookit.min";
 import PopupRefer from "../../components/popups/popupRefer";
+import { ocrLangList } from "../../constants/dropdownList";
 declare var window: any;
 let lock = false; //prevent from clicking too fasts
 
@@ -111,21 +112,54 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
         return item.chapterIndex === this.state.chapterDocIndex;
       }
     });
+    if (this.props.currentBook.format === "PDF") {
+      highlightersByChapter = highlightersByChapter.map((item: Note) => {
+        let cfi = JSON.parse(item.cfi);
+        if (cfi.fingerprint) {
+          item.chapterIndex = cfi.page - 1;
+          cfi.chapterDocIndex = cfi.page - 1 + "";
+          cfi.chapterHref = "title" + (cfi.page - 1);
+          item.cfi = JSON.stringify(cfi);
+        }
+
+        return item;
+      });
+    }
     await this.props.htmlBook.rendition.renderHighlighters(
       highlightersByChapter,
       this.handleNoteClick
     );
     if (
       this.props.currentBook.format === "PDF" &&
-      this.props.readerMode === "double"
+      (this.props.readerMode === "double" ||
+        this.props.readerMode === "scroll") &&
+      ConfigService.getReaderConfig("isConvertPDF") !== "yes"
     ) {
       let highlightersByChapter = highlighters.filter((item: Note) => {
         if (item.bookKey !== this.props.currentBook.key) {
           return false;
         }
-
-        return item.chapterIndex === this.state.chapterDocIndex + 1;
+        let cfi = JSON.parse(item.cfi);
+        if (cfi.fingerprint) {
+          // pdf from 1.7.4 or older
+          return cfi.page === this.state.chapterDocIndex;
+        } else {
+          return item.chapterIndex === this.state.chapterDocIndex + 1;
+        }
       });
+      if (this.props.currentBook.format === "PDF") {
+        highlightersByChapter = highlightersByChapter.map((item: Note) => {
+          let cfi = JSON.parse(item.cfi);
+          if (cfi.fingerprint) {
+            item.chapterIndex = cfi.page - 1;
+            cfi.chapterDocIndex = cfi.page - 1 + "";
+            cfi.chapterHref = "title" + (cfi.page - 1);
+            item.cfi = JSON.stringify(cfi);
+          }
+
+          return item;
+        });
+      }
       await this.props.htmlBook.rendition.renderHighlighters(
         highlightersByChapter,
         this.handleNoteClick
@@ -195,11 +229,28 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
             "rgba(44,47,49,1)"
               ? "yes"
               : "no",
+          backgroundColor: ConfigService.getReaderConfig("backgroundColor"),
           isMobile: "no",
+          isIndent: ConfigService.getReaderConfig("isIndent"),
           isStartFromEven: ConfigService.getReaderConfig("isStartFromEven"),
           password: getPdfPassword(this.props.currentBook),
           scale: parseFloat(this.state.scale),
           isConvertPDF: ConfigService.getReaderConfig("isConvertPDF"),
+          ocrLang: ConfigService.getReaderConfig("ocrLang")
+            ? ConfigService.getReaderConfig("ocrLang")
+            : ocrLangList.find(
+                (item) => item.lang === ConfigService.getReaderConfig("lang")
+              )?.value || "chi_sim",
+          ocrEngine: ConfigService.getReaderConfig("ocrEngine") || "tesseract",
+          serverRegion: ConfigService.getItem("serverRegion") || "global",
+          paraSpacingValue:
+            ConfigService.getReaderConfig("paraSpacingValue") || "1.5",
+          titleSizeValue:
+            ConfigService.getReaderConfig("titleSizeValue") || "1.2",
+          isScannedPDF:
+            this.props.currentBook.description.indexOf("scanned PDF") > -1
+              ? "yes"
+              : "no",
         },
         Kookit
       );
@@ -373,7 +424,10 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
         this.props.handleLeaveReader("bottom");
       });
       doc.addEventListener("mouseup", (event) => {
-        if (this.props.currentBook.format === "PDF") {
+        if (
+          this.props.currentBook.format === "PDF" &&
+          ConfigService.getReaderConfig("isConvertPDF") !== "yes"
+        ) {
           let ownerDoc = (event.target as HTMLElement).ownerDocument;
           let targetIframe = ownerDoc?.defaultView?.frameElement;
           let id = targetIframe?.getAttribute("id") || "";
@@ -398,7 +452,10 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
         this.setState({ rect });
       });
       doc.addEventListener("contextmenu", (event) => {
-        if (this.props.currentBook.format === "PDF") {
+        if (
+          this.props.currentBook.format === "PDF" &&
+          ConfigService.getReaderConfig("isConvertPDF") !== "yes"
+        ) {
           let ownerDoc = (event.target as HTMLElement).ownerDocument;
           let targetIframe = ownerDoc?.defaultView?.frameElement;
           let id = targetIframe?.getAttribute("id") || "";
@@ -460,7 +517,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
             }}
           />
         ) : null}
-        {this.props.htmlBook && (
+        {this.props.htmlBook && this.props.currentBook.format !== "PDF" && (
           <ImageViewer
             {...{
               isShow: this.props.isShow,
