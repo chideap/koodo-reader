@@ -1,7 +1,7 @@
 {
   "name": "koodo-reader",
   "main": "main.js",
-  "version": "2.1.5",
+  "version": "2.1.6",
   "description": "Koodo Reader is a cross-platform ebook reader",
   "author": {
     "name": "App by Troye",
@@ -244,7 +244,9 @@
         {
           "target": "nsis",
           "arch": [
-            "x64"
+            "x64",
+            "ia32",
+            "arm64"
           ]
         },
         {
@@ -309,6 +311,7 @@
       "artifactName": "${productName}-${version}-${arch}.${ext}",
       "oneClick": true,
       "allowToChangeInstallationDirectory": false,
+      "buildUniversalInstaller": false,
       "include": "assets/windows/installer.nsh"
     },
     "snap": {
