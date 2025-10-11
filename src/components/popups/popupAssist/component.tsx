@@ -137,13 +137,13 @@ class PopupAssist extends React.Component<PopupAssistProps, PopupAssistState> {
             });
           }
         }
-        if (res.code === 20006) {
-          this.setState({
-            isWaiting: false,
-            answer: "",
-            question: "",
-          });
-        }
+        // if (res.code === 20006) {
+        //   this.setState({
+        //     isWaiting: false,
+        //     answer: "",
+        //     question: "",
+        //   });
+        // }
         this.scrollToBottom();
       }
     } catch (error) {

@@ -20,13 +20,17 @@ const dirPath = path.join(configDir, "uploads");
 const packageJson = require("./package.json");
 let mainWin;
 let readerWindow;
+let readerWindowList = []
 let urlWindow;
 let mainView;
+//multi tab
+// let mainViewList = []
 let chatWindow;
 let googlePickerView;
 let dbConnection = {};
 let syncUtilCache = {};
 let pickerUtilCache = {};
+let downloadRequest = null;
 const singleInstance = app.requestSingleInstanceLock();
 var filePath = null;
 if (process.platform != "darwin" && process.argv.length >= 2) {
@@ -192,6 +196,17 @@ const createMainWin = () => {
       mainView.setBounds({ x: 0, y: 0, width: width, height: height })
     }
   });
+  //cancel-download-app
+  ipcMain.handle('cancel-download-app', (event, arg) => {
+    // Implement cancellation logic here
+    // Note: In this example, we are not keeping a reference to the request,
+    // so we cannot actually abort it. This is a placeholder for demonstration.
+    if (downloadRequest) {
+      downloadRequest.abort();
+      downloadRequest = null;
+    }
+    event.returnValue = 'cancelled';
+  });
   ipcMain.handle('update-win-app', (event, config) => {
     let fileName = `koodo-reader-installer.exe`;
     let supportedArchs = ['x64', 'ia32', 'arm64'];
@@ -205,7 +220,7 @@ const createMainWin = () => {
     const https = require("https");
     const { spawn } = require("child_process");
     const file = fs.createWriteStream(path.join(app.getPath('temp'), fileName));
-    https.get(url, (res) => {
+    downloadRequest = https.get(url, (res) => {
       const totalSize = parseInt(res.headers['content-length'], 10);
       let downloadedSize = 0;
       res.on('data', (chunk) => {
@@ -244,10 +259,9 @@ const createMainWin = () => {
             windowsHide: false                // 确保窗口可见
           });
 
-
           setTimeout(() => {
             app.quit();
-          }, 1000);
+          }, 3000);
           child.unref();
         } catch (err) {
           console.error(`spawn 执行异常: ${err.message}`);
@@ -275,10 +289,16 @@ const createMainWin = () => {
 
 
     if (isAutoFullscreen === "yes") {
+      if (readerWindow) {
+        readerWindowList.push(readerWindow)
+      }
       readerWindow = new BrowserWindow(options);
       readerWindow.loadURL(url);
       readerWindow.maximize();
     } else {
+      if (readerWindow) {
+        readerWindowList.push(readerWindow)
+      }
       readerWindow = new BrowserWindow({
         ...options,
         width: parseInt(store.get("windowWidth") || 1050),
@@ -468,11 +488,9 @@ const createMainWin = () => {
     });
 
     if (result.canceled) {
-      console.log('User canceled the file selection');
       return "";
     } else {
       const filePath = result.filePaths[0];
-      console.log('Selected file path:', filePath);
       return filePath;
     }
   });
@@ -603,7 +621,14 @@ const createMainWin = () => {
     event.returnvalue = true;
   });
   ipcMain.handle("reload-reader", (event, arg) => {
-    if (readerWindow) {
+    if (readerWindowList.length > 0) {
+      readerWindowList.forEach(win => {
+        if (win && !win.isDestroyed()) {
+          win.reload();
+        }
+      })
+    }
+    if (readerWindow && !readerWindow.isDestroyed()) {
       readerWindow.reload();
     }
   });
@@ -774,7 +799,11 @@ const createMainWin = () => {
         "isMergeWord",
         store.get("isMergeWord") !== "yes" ? "yes" : "no"
       );
+      if (readerWindow) {
+        readerWindowList.push(readerWindow)
+      }
       readerWindow = new BrowserWindow(options);
+
       readerWindow.loadURL(store.get("url"));
       readerWindow.on("close", (event) => {
         if (!readerWindow.isDestroyed()) {

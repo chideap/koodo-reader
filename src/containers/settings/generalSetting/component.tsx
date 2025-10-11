@@ -52,6 +52,8 @@ class GeneralSetting extends React.Component<
         ConfigService.getReaderConfig("isAutoMaximizeWin") === "yes",
       isAutoLaunch: ConfigService.getReaderConfig("isAutoLaunch") === "yes",
       isOpenInMain: ConfigService.getReaderConfig("isOpenInMain") === "yes",
+      isUseOriginalName:
+        ConfigService.getReaderConfig("isUseOriginalName") === "yes",
       isExportOriginalName:
         ConfigService.getReaderConfig("isExportOriginalName") === "yes",
       isDisableUpdate:
@@ -476,7 +478,7 @@ class GeneralSetting extends React.Component<
                 setTimeout(() => {
                   reloadManager();
                 }, 300);
-              } else {
+              } else if (answer) {
                 toast.error(this.props.t("Please type 'CLEAR' to confirm"));
               }
             }}

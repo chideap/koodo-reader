@@ -29,8 +29,6 @@ function getBookCountPerPage() {
   const rows = Math.max(1, Math.floor(containerHeight / bookHeight)) + 2;
   return columns * rows;
 }
-// 每页显示的图书数量
-const BOOKS_PER_PAGE = getBookCountPerPage();
 
 class BookList extends React.Component<BookListProps, BookListState> {
   private scrollContainer: React.RefObject<HTMLUListElement>;
@@ -45,7 +43,7 @@ class BookList extends React.Component<BookListProps, BookListState> {
       isHideShelfBook:
         ConfigService.getReaderConfig("isHideShelfBook") === "yes",
       isRefreshing: false,
-      displayedBooksCount: BOOKS_PER_PAGE,
+      displayedBooksCount: getBookCountPerPage(),
       isLoadingMore: false,
     };
   }
@@ -80,7 +78,7 @@ class BookList extends React.Component<BookListProps, BookListState> {
       prevProps.shelfTitle !== this.props.shelfTitle
     ) {
       this.setState({
-        displayedBooksCount: BOOKS_PER_PAGE,
+        displayedBooksCount: getBookCountPerPage(),
         isLoadingMore: false,
       });
       // 滚动到顶部
@@ -129,7 +127,7 @@ class BookList extends React.Component<BookListProps, BookListState> {
     setTimeout(() => {
       this.setState({
         displayedBooksCount: Math.min(
-          displayedBooksCount + BOOKS_PER_PAGE,
+          displayedBooksCount + getBookCountPerPage(),
           books.length
         ),
         isLoadingMore: false,
@@ -237,20 +235,50 @@ class BookList extends React.Component<BookListProps, BookListState> {
       : this.state.isHideShelfBook
       ? "hide"
       : "home";
-
     let books =
       bookMode === "search"
         ? this.handleIndexFilter(this.props.books, this.props.searchResults)
         : bookMode === "shelf"
-        ? this.handleShelf(this.props.books, this.props.shelfTitle)
+        ? this.handleIndexFilter(
+            this.handleShelf(this.props.books, this.props.shelfTitle),
+            SortUtil.sortBooks(
+              this.handleShelf(this.props.books, this.props.shelfTitle),
+              this.props.bookSortCode,
+              ConfigService
+            ) || []
+          )
         : bookMode === "favorite"
-        ? this.handleKeyFilter(
-            this.props.books,
-            ConfigService.getAllListConfig("favoriteBooks")
+        ? this.handleIndexFilter(
+            this.handleKeyFilter(
+              this.props.books,
+              ConfigService.getAllListConfig("favoriteBooks")
+            ),
+            SortUtil.sortBooks(
+              this.handleKeyFilter(
+                this.props.books,
+                ConfigService.getAllListConfig("favoriteBooks")
+              ),
+              this.props.bookSortCode,
+              ConfigService
+            ) || []
           )
         : bookMode === "hide"
-        ? this.handleFilterShelfBook(this.props.books)
-        : this.props.books;
+        ? this.handleIndexFilter(
+            this.handleFilterShelfBook(this.props.books),
+            SortUtil.sortBooks(
+              this.handleFilterShelfBook(this.props.books),
+              this.props.bookSortCode,
+              ConfigService
+            ) || []
+          )
+        : this.handleIndexFilter(
+            this.props.books,
+            SortUtil.sortBooks(
+              this.props.books,
+              this.props.bookSortCode,
+              ConfigService
+            ) || []
+          );
 
     return {
       books,

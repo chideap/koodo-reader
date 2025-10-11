@@ -237,7 +237,7 @@ class Login extends React.Component<LoginProps, LoginState> {
               </div>
               <div className="login-subtitle">
                 {this.props.t(
-                  "With the integration of your cloud drive, WebDAV, and object storage, all your data remains securely in your control"
+                  "With the integration of popular cloud storage services, WebDAV, FTP, SFTP, SMB, Docker, and object storage, all your data remains securely in your control"
                 )}
               </div>
               <div>
@@ -493,7 +493,15 @@ class Login extends React.Component<LoginProps, LoginState> {
                               {this.props.t("Recommended (use with Nutstore)")}
                             </div>
                           )}
-
+                        {ConfigService.getReaderConfig("lang") &&
+                          ConfigService.getReaderConfig("lang").startsWith(
+                            "zh"
+                          ) &&
+                          item.value === "microsoft" && (
+                            <div className="login-sync-text">
+                              {this.props.t("Access may be unstable in China")}
+                            </div>
+                          )}
                         {ConfigService.getReaderConfig("lang") &&
                           ConfigService.getReaderConfig("lang").startsWith(
                             "zh"
