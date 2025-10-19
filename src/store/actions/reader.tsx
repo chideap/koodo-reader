@@ -37,11 +37,47 @@ export function handleNoteKey(key: string) {
 export function handleReaderMode(readerMode: string) {
   return { type: "HANDLE_READER_MODE", payload: readerMode };
 }
+export function handleScale(scale: string) {
+  return { type: "HANDLE_SCALE", payload: scale };
+}
+export function handleMargin(margin: string) {
+  return { type: "HANDLE_MARGIN", payload: margin };
+}
+export function handleBackgroundColor(backgroundColor: string) {
+  return { type: "HANDLE_BACKGROUND_COLOR", payload: backgroundColor };
+}
 export function handleNavLock(isNavLocked: boolean) {
   return { type: "HANDLE_NAV_LOCK", payload: isNavLocked };
 }
 export function handleSettingLock(isSettingLocked: boolean) {
   return { type: "HANDLE_SETTING_LOCK", payload: isSettingLocked };
+}
+export function handleHideFooter(isHideFooter: boolean) {
+  return { type: "HANDLE_HIDE_FOOTER", payload: isHideFooter };
+}
+export function handleHideHeader(isHideHeader: boolean) {
+  return { type: "HANDLE_HIDE_HEADER", payload: isHideHeader };
+}
+export function handleHideBackground(isHideBackground: boolean) {
+  return { type: "HANDLE_HIDE_BACKGROUND", payload: isHideBackground };
+}
+export function handleHidePageButton(isHidePageButton: boolean) {
+  return { type: "HANDLE_HIDE_PAGE_BUTTON", payload: isHidePageButton };
+}
+export function handleHideMenuButton(isHideMenuButton: boolean) {
+  return { type: "HANDLE_HIDE_MENU_BUTTON", payload: isHideMenuButton };
+}
+export function handleHideAIButton(isHideAIButton: boolean) {
+  return { type: "HANDLE_HIDE_AI_BUTTON", payload: isHideAIButton };
+}
+export function handleHideScaleButton(isHideScaleButton: boolean) {
+  return { type: "HANDLE_HIDE_SCALE_BUTTON", payload: isHideScaleButton };
+}
+export function handleHidePDFConvertButton(isHidePDFConvertButton: boolean) {
+  return {
+    type: "HANDLE_HIDE_PDF_CONVERT_BUTTON",
+    payload: isHidePDFConvertButton,
+  };
 }
 export function handleFetchNotes() {
   return (dispatch: (arg0: { type: string; payload: NoteModel[] }) => void) => {

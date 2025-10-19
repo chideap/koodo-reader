@@ -732,46 +732,6 @@ export const testCORS = async (url: string) => {
     return false;
   }
 };
-export const isElementFootnote = (element: HTMLElement) => {
-  if (!element) return false;
-  if (element.tagName === "IMG") {
-    return true;
-  }
-  if (element.textContent) {
-    let textContent = element.textContent.trim();
-    // Check for patterns like [1], [a], (1), (a)
-    const footnotePattern = /^(\[|\()([a-zA-Z0-9]+)(\]|\))$|^\d+$/;
-    if (footnotePattern.test(textContent)) {
-      return true;
-    }
-  }
-
-  return false;
-};
-export const getTargetHref = (event: any) => {
-  let href = "";
-  if (!event || !event.target) return href;
-  if (event.target.innerText && event.target.innerText.startsWith("http")) {
-    href = event.target.innerText;
-  }
-  // if (event.target.tagName === "IMG") {
-  //   return href;
-  // }
-  let currentElement = event.target;
-  while (currentElement && currentElement.tagName !== "BODY") {
-    if (currentElement.getAttribute) {
-      const elementHref = currentElement.getAttribute("href");
-
-      if (elementHref) {
-        href = elementHref || "";
-        break;
-      }
-    }
-    currentElement = currentElement.parentNode;
-  }
-
-  return href;
-};
 export const getPdfPassword = (book: Book) => {
   if (book.format !== "PDF" || !book?.description) return "";
   // 匹配形如 protected PDF: #password# 的内容
@@ -866,33 +826,8 @@ export const clearAllData = async () => {
     if (fs.existsSync(storageLocation)) {
       fs.rmSync(storageLocation, { recursive: true, force: true });
     }
+    const { ipcRenderer } = window.require("electron");
+    ipcRenderer.invoke("clear-all-data", {});
   }
   await localforage.clear();
-};
-const convertBlobToDataURL = async (blobUrl) => {
-  const response = await fetch(blobUrl);
-  const blob = await response.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
-export const processHtml = async (html) => {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
-  const images: any[] = Array.from(doc.getElementsByTagName("img"));
-  for (const img of images) {
-    if (img.src && img.src.startsWith("blob:")) {
-      try {
-        const dataUrl = await convertBlobToDataURL(img.src);
-        img.src = dataUrl;
-        img.style.maxWidth = "100%"; // 确保图片不会超出容器宽度
-      } catch (error) {
-        console.error("Error converting blob to data URL:", error);
-      }
-    }
-  }
-  return doc.body.innerHTML;
 };

@@ -10,7 +10,13 @@ export interface ReaderProps {
   isConvertOpen: boolean;
   isSearch: boolean;
   isAuthed: boolean;
+  isHidePageButton: boolean;
+  isHideMenuButton: boolean;
+  isHideAIButton: boolean;
+  isHidePDFConvertButton: boolean;
+  isHideScaleButton: boolean;
   readerMode: string;
+  scale: string;
   handleFetchNotes: () => void;
   handleReaderMode: (readerMode: string) => void;
   handleConvertDialog: (isConvertOpen: boolean) => void;
@@ -21,6 +27,8 @@ export interface ReaderProps {
   handleFetchBookmarks: () => void;
   handleFetchPercentage: (currentBook: BookModel) => void;
   handleReadingBook: (book: BookModel) => void;
+  handleScale: (scale: string) => void;
+  renderBookFunc: () => void;
 }
 
 export interface ReaderState {

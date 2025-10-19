@@ -12,8 +12,6 @@ class Background extends React.Component<BackgroundProps, BackgroundState> {
       isSingle: this.props.readerMode !== "double",
       prevPage: 0,
       nextPage: 0,
-      isHideFooter: ConfigService.getReaderConfig("isHideFooter") === "yes",
-      isHideHeader: ConfigService.getReaderConfig("isHideHeader") === "yes",
     };
     this.isFirst = true;
   }
@@ -25,6 +23,9 @@ class Background extends React.Component<BackgroundProps, BackgroundState> {
         await this.handlePageNum(nextProps.htmlBook.rendition);
         this.handleLocation();
       });
+    }
+    if (nextProps.readerMode !== this.props.readerMode) {
+      this.setState({ isSingle: nextProps.readerMode !== "double" });
     }
   }
   handleLocation = () => {
@@ -77,16 +78,7 @@ class Background extends React.Component<BackgroundProps, BackgroundState> {
               : "calc(100% - 300px)",
           left: !this.props.isNavLocked ? "0" : "300px",
           right: !this.props.isSettingLocked ? "0" : "300px",
-          backgroundColor:
-            ConfigService.getReaderConfig("isMergeWord") === "yes"
-              ? "rgba(0,0,0,0)"
-              : ConfigService.getReaderConfig("backgroundColor")
-              ? ConfigService.getReaderConfig("backgroundColor")
-              : ConfigService.getReaderConfig("appSkin") === "night" ||
-                (ConfigService.getReaderConfig("appSkin") === "system" &&
-                  ConfigService.getReaderConfig("isOSNight") === "yes")
-              ? "rgba(44,47,49,1)"
-              : "rgba(255,255,255,1)",
+          backgroundColor: this.props.backgroundColor,
           filter: `brightness(${
             ConfigService.getReaderConfig("brightness") || 1
           }) invert(${
@@ -95,7 +87,7 @@ class Background extends React.Component<BackgroundProps, BackgroundState> {
         }}
       >
         <div className="header-container">
-          {!this.state.isHideHeader && this.props.currentChapter + "" && (
+          {!this.props.isHideHeader && this.props.currentChapter + "" && (
             <p
               className="header-chapter-name"
               style={
@@ -110,7 +102,7 @@ class Background extends React.Component<BackgroundProps, BackgroundState> {
               {this.props.currentChapter}
             </p>
           )}
-          {!this.state.isHideHeader &&
+          {!this.props.isHideHeader &&
             this.props.currentChapter + "" &&
             !this.state.isSingle && (
               <p
@@ -129,7 +121,7 @@ class Background extends React.Component<BackgroundProps, BackgroundState> {
             )}
         </div>
         <div className="footer-container">
-          {!this.state.isHideFooter && this.state.prevPage > 0 && (
+          {!this.props.isHideFooter && this.state.prevPage > 0 && (
             <p
               className="background-page-left"
               style={
@@ -149,7 +141,7 @@ class Background extends React.Component<BackgroundProps, BackgroundState> {
               </Trans>
             </p>
           )}
-          {!this.state.isHideFooter &&
+          {!this.props.isHideFooter &&
             this.state.nextPage > 0 &&
             !this.state.isSingle && (
               <p className="background-page-right">

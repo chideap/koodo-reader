@@ -177,7 +177,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
     return (
       <div className="viewer">
         <Tooltip id="my-tooltip" style={{ zIndex: 25 }} />
-        {ConfigService.getReaderConfig("isHidePageButton") !== "yes" && (
+        {!this.props.isHidePageButton && (
           <>
             <div
               className="previous-chapter-single-container"
@@ -209,28 +209,27 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
             >
               <span className="icon-dropdown next-chapter-single"></span>
             </div>
-            {this.props.isAuthed &&
-              ConfigService.getReaderConfig("isHideAIButton") !== "yes" && (
-                <div
-                  className="next-chapter-single-container"
-                  onClick={async () => {
-                    this.props.handleMenuMode("assistant");
-                    this.props.handleOriginalText(
-                      await this.props.htmlBook.rendition.chapterText()
-                    );
-                    this.props.handleOpenMenu(true);
-                  }}
-                  style={{
-                    bottom: "55px",
-                    transform: "rotate(0deg)",
-                    fontWeight: "bold",
-                    fontSize: "17px",
-                    right: this.props.isSettingLocked ? 315 : 15,
-                  }}
-                >
-                  AI
-                </div>
-              )}
+            {this.props.isAuthed && !this.props.isHideAIButton && (
+              <div
+                className="next-chapter-single-container"
+                onClick={async () => {
+                  this.props.handleMenuMode("assistant");
+                  this.props.handleOriginalText(
+                    await this.props.htmlBook.rendition.chapterText()
+                  );
+                  this.props.handleOpenMenu(true);
+                }}
+                style={{
+                  bottom: "55px",
+                  transform: "rotate(0deg)",
+                  fontWeight: "bold",
+                  fontSize: "17px",
+                  right: this.props.isSettingLocked ? 315 : 15,
+                }}
+              >
+                AI
+              </div>
+            )}
           </>
         )}
         <div
@@ -247,7 +246,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
         >
           {(this.props.readerMode === "scroll" ||
             this.props.readerMode === "single") &&
-            ConfigService.getReaderConfig("isHideScaleButton") !== "yes" && (
+            !this.props.isHideScaleButton && (
               <div
                 style={{
                   display: "flex",
@@ -302,7 +301,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
                               parseFloat(fieldVal) / 100 + ""
                             );
                           }
-                          BookUtil.reloadBooks();
+                          this.props.renderBookFunc();
                         }}
                       />
                       <span> %</span>
@@ -323,7 +322,8 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
                         this.setState({ scale: event.target.value });
                       }}
                       onMouseUp={() => {
-                        BookUtil.reloadBooks();
+                        this.props.handleScale(this.state.scale);
+                        this.props.renderBookFunc();
                       }}
                       style={{
                         zIndex: 100,
@@ -343,8 +343,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
               </div>
             )}
           {this.props.currentBook.format === "PDF" &&
-            ConfigService.getReaderConfig("isHidePDFConvertButton") !==
-              "yes" && (
+            !this.props.isHidePDFConvertButton && (
               <div
                 className="reader-setting-icon-container"
                 onClick={() => {
@@ -357,7 +356,7 @@ class Reader extends React.Component<ReaderProps, ReaderState> {
                 ></span>
               </div>
             )}
-          {ConfigService.getReaderConfig("isHideMenuButton") !== "yes" && (
+          {!this.props.isHideMenuButton && (
             <div
               className="reader-setting-icon-container"
               onClick={() => {

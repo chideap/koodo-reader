@@ -16,7 +16,10 @@ export interface ViewerProps {
   isOpenMenu: boolean;
   isNavLocked: boolean;
   isSettingLocked: boolean;
+  isHideBackground: boolean;
   defaultSyncOption: string;
+  scale: string;
+  margin: string;
   handleRenderBookFunc: (renderBookFunc: () => void) => void;
   renderNoteFunc: () => void;
   handleFetchAuthed: () => void;
@@ -38,15 +41,15 @@ export interface ViewerProps {
   handleCurrentChapterIndex: (currentChapterIndex: number) => void;
   handlePercentage: (percentage: number) => void;
   handleFetchPercentage: (book: Book) => void;
+  handleScale: (scale: string) => void;
+  renderBookFunc: () => void;
 }
 export interface ViewerState {
   key: string;
-  scale: string;
   isFirst: boolean;
   isTouch: boolean;
   chapterTitle: string;
   isDisablePopup: boolean;
-  margin: number;
   chapter: string;
   pageOffset: string;
   pageWidth: string;
