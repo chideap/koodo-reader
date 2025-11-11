@@ -208,6 +208,9 @@ export const getPageWidth = (
   isNavLocked: boolean,
   isSettingLocked: boolean
 ) => {
+  if (Math.abs(parseFloat(scale)) > 1.4) {
+    scale = "1.3";
+  }
   const findValidMultiple = (limit: number) => {
     let multiple = limit - (limit % 12);
 
@@ -225,18 +228,6 @@ export const getPageWidth = (
       document.body.clientWidth * 0.4 >
     document.body.clientWidth
   ) {
-    if (
-      document.body.clientWidth * Math.abs(parseFloat(scale)) -
-        document.body.clientWidth * 0.4 >
-      document.body.clientWidth
-    ) {
-      let pageWidth = document.body.clientWidth - 106;
-      let pageOffset = 50 + "px";
-      return {
-        pageOffset,
-        pageWidth: pageWidth + "px",
-      };
-    }
     let pageWidth = document.body.clientWidth - 106;
     let pageOffset = 50 + "px";
     return {

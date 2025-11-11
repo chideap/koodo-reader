@@ -374,7 +374,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
             return;
           } else {
             toast.loading(
-              this.props.t("Start Transfering Data") +
+              this.props.t("Start Transferring Data") +
                 " (" +
                 stats.completed +
                 "/" +
@@ -413,7 +413,7 @@ class Header extends React.Component<HeaderProps, HeaderState> {
             return;
           } else {
             toast.loading(
-              this.props.t("Start Transfering Data") +
+              this.props.t("Start Transferring Data") +
                 " (" +
                 stats.completed +
                 "/" +
@@ -449,9 +449,14 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       this.setState({ isSync: false });
     } catch (error) {
       console.error(error);
-      toast.error(this.props.t("Sync failed"), {
-        id: "syncing",
-      });
+      toast.error(
+        this.props.t("Sync failed") +
+          ": " +
+          (error instanceof Error ? error.message : String(error)),
+        {
+          id: "syncing",
+        }
+      );
       clearInterval(this.timer);
       this.setState({ isSync: false });
       return;
@@ -517,9 +522,14 @@ class Header extends React.Component<HeaderProps, HeaderState> {
       console.error(error);
       clearInterval(this.timer);
       this.setState({ isSync: false });
-      toast.error(this.props.t("Sync failed"), {
-        id: "syncing",
-      });
+      toast.error(
+        this.props.t("Sync failed") +
+          ": " +
+          (error instanceof Error ? error.message : String(error)),
+        {
+          id: "syncing",
+        }
+      );
 
       return;
     }
