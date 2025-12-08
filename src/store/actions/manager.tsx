@@ -11,8 +11,6 @@ import {
   officialDictList,
   officialTranList,
 } from "../../constants/settingList";
-import toast from "react-hot-toast";
-import i18n from "../../i18n";
 
 export function handleBooks(books: BookModel[]) {
   return { type: "HANDLE_BOOKS", payload: books };
@@ -75,6 +73,9 @@ export function handleNewWarning(isNewWarning: boolean) {
 }
 export function handleShowSupport(isShowSupport: boolean) {
   return { type: "HANDLE_SHOW_SUPPORT", payload: isShowSupport };
+}
+export function handleLoadMore(isLoadMore: boolean) {
+  return { type: "HANDLE_LOAD_MORE", payload: isLoadMore };
 }
 export function handleBookSort(isBookSort: boolean) {
   return { type: "HANDLE_BOOK_SORT", payload: isBookSort };
@@ -194,6 +195,9 @@ export function handleFetchAuthed() {
     try {
       TokenService.getToken("is_authed").then((value) => {
         let isAuthed = value === "yes";
+        if (isAuthed && !ConfigService.getItem("serverRegion")) {
+          ConfigService.setItem("serverRegion", "global");
+        }
         dispatch(handleAuthed(isAuthed));
       });
     } catch (error) {

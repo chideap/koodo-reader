@@ -8,11 +8,15 @@ export interface HeaderProps extends RouteComponentProps<any> {
   isAboutOpen: boolean;
   isCollapsed: boolean;
   isNewWarning: boolean;
+  isLoadMore: boolean;
   isAuthed: boolean;
   bookmarks: BookmarkModel[];
   notes: NoteModel[];
   books: BookModel[];
   defaultSyncOption: string;
+  mode: string;
+  userInfo: any;
+  bookSortCode: { sort: number; order: number };
   handleSortDisplay: (isSortDisplay: boolean) => void;
   handleSetting: (isSettingOpen: boolean) => void;
   handleAbout: (isAboutOpen: boolean) => void;

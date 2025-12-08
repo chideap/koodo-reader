@@ -10,18 +10,22 @@ import { themeList } from "../../../constants/themeList";
 import toast from "react-hot-toast";
 import {
   generateSyncRecord,
+  getServerRegion,
+  getWebsiteUrl,
   handleContextMenu,
   openExternalUrl,
   openInBrowser,
+  resetKoodoSync,
+  showTaskProgress,
   testConnection,
   testCORS,
-  WEBSITE_URL,
 } from "../../../utils/common";
 import { getStorageLocation } from "../../../utils/common";
 import { driveInputConfig, driveList } from "../../../constants/driveList";
 import {
   ConfigService,
   KookitConfig,
+  SyncHelper,
   SyncUtil,
   TokenService,
 } from "../../../assets/lib/kookit-extra-browser.min";
@@ -30,7 +34,10 @@ import {
   onSyncCallback,
 } from "../../../utils/request/thirdparty";
 import SyncService from "../../../utils/storage/syncService";
-import { resetKoodoSync, updateUserConfig } from "../../../utils/request/user";
+import { updateUserConfig } from "../../../utils/request/user";
+import BookUtil from "../../../utils/file/bookUtil";
+import Book from "../../../models/Book";
+import ConfigUtil from "../../../utils/file/configUtil";
 declare var window: any;
 class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
   constructor(props: SettingInfoProps) {
@@ -108,7 +115,7 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
     ) {
       this.handleJump(
         new SyncUtil(settingDrive, {}).getAuthUrl(
-          ConfigService.getItem("serverRegion") === "china" &&
+          getServerRegion() === "china" &&
             (settingDrive === "microsoft" ||
               settingDrive === "microsoft_exp" ||
               settingDrive === "adrive")
@@ -144,10 +151,25 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
     if (!event.target.value) {
       return;
     }
-    resetKoodoSync(event.target.value);
     ConfigService.setItem("defaultSyncOption", event.target.value);
+    if (ConfigService.getReaderConfig("isEnableKoodoSync") === "yes") {
+      resetKoodoSync();
+    }
     this.props.handleFetchDefaultSyncOption();
     toast.success(this.props.t("Change successful"));
+    if (
+      !(await ConfigUtil.isCloudEmpty()) &&
+      ConfigService.getReaderConfig("isEnableKoodoSync") === "yes"
+    ) {
+      toast(
+        this.props.t(
+          "This data source already contains a library. If you need to merge local and cloud data, please turn off Koodo Sync and resync."
+        ),
+        {
+          duration: 10000,
+        }
+      );
+    }
   };
   handleCancelDrive = () => {
     this.props.handleSettingDrive("");
@@ -212,15 +234,42 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
 
             <span
               className="single-control-switch"
-              onClick={() => {
+              onClick={async () => {
                 switch (item.propName) {
                   case "isEnableKoodoSync":
                     updateUserConfig({
                       is_enable_koodo_sync: !this.state.isEnableKoodoSync
                         ? "yes"
                         : "no",
+                      default_sync_option: this.props.defaultSyncOption,
                     });
                     this.handleSetting(item.propName);
+                    break;
+                  case "autoOffline":
+                    this.handleSetting(item.propName);
+                    if (!this.state.autoOffline) {
+                      let downloadTasks = await SyncHelper.syncBook(
+                        ConfigService,
+                        BookUtil
+                      );
+                      let timer = await showTaskProgress((_: boolean) => {});
+                      if (!timer) {
+                        return;
+                      }
+                      await SyncHelper.runTasksWithLimit(
+                        downloadTasks,
+                        99,
+                        ConfigService.getItem("defaultSyncOption")
+                      );
+                      clearInterval(timer);
+                      toast.success(this.props.t("Download completed"), {
+                        id: "autoOffline",
+                      });
+                      setTimeout(() => {
+                        toast.dismiss("syncing");
+                      }, 3000);
+                    }
+
                     break;
                   default:
                     this.handleSetting(item.propName);
@@ -323,6 +372,7 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                         <div
                           style={{
                             marginTop: "5px",
+                            marginBottom: "2px",
                             marginLeft: "2px",
                             fontSize: "12px",
                             opacity: 0.8,
@@ -416,8 +466,11 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                     }
                   }
                   if (
-                    this.props.settingDrive === "docker" ||
                     this.props.settingDrive === "webdav" ||
+                    this.props.settingDrive === "docker" ||
+                    this.props.settingDrive === "ftp" ||
+                    this.props.settingDrive === "sftp" ||
+                    this.props.settingDrive === "mega" ||
                     this.props.settingDrive === "s3compatible"
                   ) {
                     let connectionResult = await testConnection(
@@ -459,7 +512,7 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                     onClick={async () => {
                       this.handleJump(
                         new SyncUtil(this.props.settingDrive, {}).getAuthUrl(
-                          ConfigService.getItem("serverRegion") === "china" &&
+                          getServerRegion() === "china" &&
                             (this.props.settingDrive === "microsoft" ||
                               this.props.settingDrive === "microsoft_exp" ||
                               this.props.settingDrive === "adrive")
@@ -509,7 +562,7 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                       className="voice-add-cancel"
                       style={{ borderWidth: 0, lineHeight: "30px" }}
                       onClick={() => {
-                        openExternalUrl(WEBSITE_URL + "/zh/add-source");
+                        openExternalUrl(getWebsiteUrl() + "/zh/add-source");
                       }}
                     >
                       {this.props.t("How to fill out")}
@@ -534,7 +587,7 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
                 support: ["desktop", "browser", "phone"],
               },
               ...driveList.filter((item) => {
-                if (ConfigService.getItem("serverRegion") === "china") {
+                if (getServerRegion() === "china") {
                   return item.isCNAvailable;
                 }
                 return true;
@@ -572,7 +625,7 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
             {[
               { label: "Please select", value: "", isPro: false },
               ...driveList.filter((item) => {
-                if (ConfigService.getItem("serverRegion") === "china") {
+                if (getServerRegion() === "china") {
                   return item.isCNAvailable;
                 }
                 return true;
@@ -600,14 +653,43 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
             <select
               name=""
               className="lang-setting-dropdown"
-              onChange={(event) => {
-                this.handleSetDefaultSyncOption(event);
+              onChange={async (event) => {
+                event.preventDefault();
+                const newValue = event.target.value;
+                const currentValue = this.props.defaultSyncOption;
+
+                let onlineBooks: Book[] = [];
+                for (let i = 0; i < this.props.books.length; i++) {
+                  if (
+                    !(await BookUtil.isBookOffline(this.props.books[i].key))
+                  ) {
+                    onlineBooks.push(this.props.books[i]);
+                  }
+                }
+                if (onlineBooks.length > 0) {
+                  window.vex.dialog.confirm({
+                    message: this.props.t(
+                      "Some of your books are currently not downloaded to the local. Changing the default sync option may lead to data loss. We recommend downloading all books to the local by turn on Auto download cloud books in the setting before changing the default sync option. Click 'OK' to proceed without downloading."
+                    ),
+                    callback: (value) => {
+                      if (value) {
+                        this.handleSetDefaultSyncOption({
+                          target: { value: newValue },
+                        });
+                      } else {
+                        event.target.value = currentValue;
+                      }
+                    },
+                  });
+                } else {
+                  this.handleSetDefaultSyncOption(event);
+                }
               }}
             >
               {[
                 { label: "Please select", value: "", isPro: false },
                 ...driveList.filter((item) => {
-                  if (ConfigService.getItem("serverRegion") === "china") {
+                  if (getServerRegion() === "china") {
                     return item.isCNAvailable;
                   }
                   return true;

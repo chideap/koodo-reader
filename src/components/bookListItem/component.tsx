@@ -27,12 +27,16 @@ class BookListItem extends React.Component<BookItemProps, BookItemState> {
       isHover: false,
       cover: "",
       isCoverExist: false,
+      isBookOffline: true,
     };
   }
   async componentDidMount() {
     this.setState({
       cover: await CoverUtil.getCover(this.props.book),
       isCoverExist: await CoverUtil.isCoverExist(this.props.book),
+    });
+    this.setState({
+      isBookOffline: await BookUtil.isBookOffline(this.props.book.key),
     });
     let filePath = "";
     //open book when app start
@@ -62,6 +66,9 @@ class BookListItem extends React.Component<BookItemProps, BookItemState> {
           ) > -1,
         cover,
         isCoverExist,
+      });
+      this.setState({
+        isBookOffline: await BookUtil.isBookOffline(nextProps.book.key),
       });
     }
   }
@@ -259,6 +266,9 @@ class BookListItem extends React.Component<BookItemProps, BookItemState> {
           >
             <div className="book-item-list-subtitle">
               <div className="book-item-list-subtitle-text">
+                {!this.state.isBookOffline && (
+                  <span className="icon-cloud book-download-action"></span>
+                )}
                 {this.props.book.name}
               </div>
             </div>

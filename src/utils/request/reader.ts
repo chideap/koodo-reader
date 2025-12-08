@@ -7,6 +7,7 @@ import {
 import i18n from "../../i18n";
 import { handleExitApp } from "./common";
 import { officialDictList } from "../../constants/settingList";
+import { getServerRegion } from "../common";
 let readerRequest: ReaderRequest | undefined;
 export const getTransStream = async (
   text: string,
@@ -81,13 +82,20 @@ export const getReaderRequest = async () => {
   if (readerRequest) {
     return readerRequest;
   }
-  readerRequest = new ReaderRequest(TokenService, ConfigService);
+  readerRequest = new ReaderRequest(
+    TokenService,
+    ConfigService,
+    getServerRegion()
+  );
   return readerRequest;
 };
 export const resetReaderRequest = () => {
   readerRequest = undefined;
 };
 export const getDictText = async (word: string, from: string, to: string) => {
+  if (from === "en") {
+    from = "eng";
+  }
   let res = await getDictionary(word, from, to);
   if (res.code === 200 && res.data && res.data.length > 0) {
     let dictText =
