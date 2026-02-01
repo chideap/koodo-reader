@@ -44,10 +44,6 @@ class styleUtil {
   static getDefaultCss() {
     return StyleHelper.getDefaultCss(ConfigService);
   }
-  //force horionztal writing mode
-  static getCustomCss() {
-    return StyleHelper.getCustomCss(ConfigService);
-  }
 
   static applyTheme() {
     if (

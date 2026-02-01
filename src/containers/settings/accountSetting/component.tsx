@@ -567,6 +567,16 @@ class AccountSetting extends React.Component<
                     );
                     handleExitApp();
                     return;
+                  } else if (response.code === 10010) {
+                    toast.error(
+                      this.props.t(
+                        "This code has already been used, if you have redeemed it before, there is no need to redeem it again. Just log in to same account to use Pro features"
+                      ),
+                      {
+                        id: "redeem-code",
+                        duration: 6000,
+                      }
+                    );
                   } else {
                     toast.error(
                       this.props.t("Redeem failed, error code") +
@@ -859,6 +869,45 @@ class AccountSetting extends React.Component<
         )}
         {this.props.isAuthed && this.props.userInfo && (
           <div className="setting-dialog-new-title">
+            <Trans>AI voice character quota</Trans>
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <span>
+                {(this.props.userInfo && this.props.userInfo.type === "pro"
+                  ? this.props.t("Free quota")
+                  : 0) +
+                  (this.props.userInfo &&
+                  this.props.userInfo.tts_credits &&
+                  this.props.userInfo.tts_credits > 0
+                    ? " + " + this.props.userInfo.tts_credits
+                    : "")}
+              </span>
+              <span
+                className="change-location-button"
+                style={{ marginLeft: "10px", cursor: "pointer" }}
+                onClick={async () => {
+                  toast.loading(this.props.t("Refreshing"), {
+                    id: "refresh-user-info",
+                  });
+                  await this.props.handleFetchUserInfo();
+                  toast.success(this.props.t("Refresh successful"), {
+                    id: "refresh-user-info",
+                  });
+                }}
+              >
+                <Trans>Refresh</Trans>
+              </span>
+            </div>
+          </div>
+        )}
+        {this.props.isAuthed && (
+          <p className="setting-option-subtitle">
+            {this.props.t(
+              "Once the daily free quota is exhausted, the system will begin deducting from your purchased quota. The character count is calculated as follows, each letter, and punctuation mark counts as one character."
+            )}
+          </p>
+        )}
+        {this.props.isAuthed && this.props.userInfo && (
+          <div className="setting-dialog-new-title">
             <Trans>Account type</Trans>
             <div style={{ display: "flex", alignItems: "center" }}>
               <span>
@@ -866,8 +915,8 @@ class AccountSetting extends React.Component<
                   {this.props.userInfo.type === "trial"
                     ? "Trial user"
                     : this.props.userInfo.type === "pro"
-                    ? "Pro user"
-                    : "Free user"}
+                      ? "Pro user"
+                      : "Free user"}
                 </Trans>
                 {" ("}
                 <Trans
@@ -901,6 +950,7 @@ class AccountSetting extends React.Component<
             </div>
           </div>
         )}
+
         <div
           style={{
             position: "absolute",

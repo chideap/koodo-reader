@@ -308,8 +308,6 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
     this.setState({ rendition });
 
     StyleUtil.addDefaultCss();
-    // rendition.tranformText();
-    // rendition.setStyle(StyleUtil.getCustomCss());
     let bookLocation: {
       text: string;
       count: string;

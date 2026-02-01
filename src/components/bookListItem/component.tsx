@@ -9,7 +9,6 @@ import ActionDialog from "../dialogs/actionDialog";
 import { isElectron } from "react-device-detect";
 import toast from "react-hot-toast";
 import CoverUtil from "../../utils/file/coverUtil";
-import { saveAs } from "file-saver";
 import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 declare var window: any;
 class BookListItem extends React.Component<BookItemProps, BookItemState> {
@@ -108,20 +107,6 @@ class BookListItem extends React.Component<BookItemProps, BookItemState> {
     this.props.handleReadingBook(this.props.book);
     BookUtil.redirectBook(this.props.book);
   };
-  handleExportBook() {
-    BookUtil.fetchBook(
-      this.props.book.key,
-      this.props.book.format.toLowerCase(),
-      true,
-      this.props.book.path
-    ).then((result: any) => {
-      toast.success(this.props.t("Export successful"));
-      saveAs(
-        new Blob([result]),
-        this.props.book.name + `.${this.props.book.format.toLocaleLowerCase()}`
-      );
-    });
-  }
   handleMoreAction = (event: any) => {
     event.preventDefault();
     const e = event || window.event;
@@ -278,8 +263,8 @@ class BookListItem extends React.Component<BookItemProps, BookItemState> {
                 ? percentage === "0"
                   ? "New"
                   : percentage === "1"
-                  ? "Done"
-                  : (parseFloat(percentage) * 100).toFixed(2)
+                    ? "Done"
+                    : (parseFloat(percentage) * 100).toFixed(2)
                 : "0"}
               {percentage &&
                 !isNaN(parseFloat(percentage)) &&

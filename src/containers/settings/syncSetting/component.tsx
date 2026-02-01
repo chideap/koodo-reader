@@ -157,6 +157,9 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
     if (targetDrive === ConfigService.getItem("defaultSyncOption")) {
       ConfigService.removeItem("defaultSyncOption");
       this.props.handleFetchDefaultSyncOption();
+      if (ConfigService.getReaderConfig("isEnableKoodoSync") === "yes") {
+        resetKoodoSync();
+      }
     }
     toast.success(this.props.t("Deletion successful"));
   };
@@ -228,6 +231,12 @@ class SyncSetting extends React.Component<SettingInfoProps, SettingInfoState> {
     }
     if (this.props.isAuthed && !ConfigService.getItem("defaultSyncOption")) {
       ConfigService.setItem("defaultSyncOption", this.props.settingDrive);
+      if (
+        ConfigService.getReaderConfig("isEnableKoodoSync") === "yes" &&
+        this.props.userInfo.default_sync_option !== this.props.settingDrive
+      ) {
+        resetKoodoSync();
+      }
       this.props.handleFetchDefaultSyncOption();
     }
     this.props.handleFetchDataSourceList();

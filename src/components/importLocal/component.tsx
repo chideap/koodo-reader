@@ -68,13 +68,13 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
   handleFilePath = async (filePath: string) => {
     clickFilePath = filePath;
     let md5 = await calculateFileMD5(await fetchFileFromPath(filePath));
-    if (this.props.books.length > 0 || this.props.deletedBooks.length > 0) {
-      let repeatBook: BookModel | null = await BookUtil.getBookByMd5(md5);
-      if (repeatBook) {
-        this.handleJump(repeatBook);
-        return;
-      }
+
+    let repeatBook: BookModel | null = await BookUtil.getBookByMd5(md5);
+    if (repeatBook) {
+      this.handleJump(repeatBook);
+      return;
     }
+
     const fileTemp = await fetchFileFromPath(filePath);
 
     this.setState({ isOpenFile: true }, async () => {
@@ -89,10 +89,14 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
   handleAddBook = (book: BookModel, buffer: ArrayBuffer) => {
     return new Promise<void>(async (resolve) => {
       if (this.state.isOpenFile) {
-        if (
-          ConfigService.getReaderConfig("isImportPath") !== "yes" &&
-          ConfigService.getReaderConfig("isPreventAdd") !== "yes"
-        ) {
+        if (ConfigService.getReaderConfig("isPreventAdd") === "yes") {
+          //ignore
+        } else if (this.props.isAuthed) {
+          await BookUtil.addBook(book.key, book.format.toLowerCase(), buffer);
+          await CoverUtil.addCover(book);
+        } else if (ConfigService.getReaderConfig("isImportPath") === "yes") {
+          //ignore
+        } else {
           await BookUtil.addBook(book.key, book.format.toLowerCase(), buffer);
           await CoverUtil.addCover(book);
         }
@@ -102,17 +106,14 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
           return resolve();
         }
       } else {
-        if (ConfigService.getReaderConfig("isImportPath") !== "yes") {
+        if (
+          ConfigService.getReaderConfig("isImportPath") !== "yes" ||
+          this.props.isAuthed
+        ) {
           await BookUtil.addBook(book.key, book.format.toLowerCase(), buffer);
         }
 
         await CoverUtil.addCover(book);
-      }
-      if (
-        this.props.isAuthed &&
-        ConfigService.getReaderConfig("isImportPath") === "yes"
-      ) {
-        this.uploadBookToCloud(book);
       }
 
       this.props.handleReadingBook(book);
@@ -384,9 +385,8 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                         //select folder from local
                         if (isElectron) {
                           const { ipcRenderer } = window.require("electron");
-                          const newPath = await ipcRenderer.invoke(
-                            "select-path"
-                          );
+                          const newPath =
+                            await ipcRenderer.invoke("select-path");
                           if (!newPath) {
                             return;
                           }
@@ -437,9 +437,8 @@ class ImportLocal extends React.Component<ImportLocalProps, ImportLocalState> {
                           // Process each file
                           for (const filePath of allFiles) {
                             try {
-                              const buffer = await fs.promises.readFile(
-                                filePath
-                              );
+                              const buffer =
+                                await fs.promises.readFile(filePath);
                               const arraybuffer = new Uint8Array(buffer).buffer;
                               const blob = new Blob([arraybuffer]);
                               const fileName = path.basename(filePath);

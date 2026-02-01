@@ -1,4 +1,4 @@
-import Plugin from "../models/Plugin";
+﻿import Plugin from "../models/Plugin";
 import { isElectron } from "react-device-detect";
 import SparkMD5 from "spark-md5";
 import {
@@ -73,9 +73,9 @@ export const vexPromptAsync = (message, placeholder = "", value = "") => {
     });
   });
 };
-export const vexComfirmAsync = (message) => {
+export const vexComfirmAsync = (message, confirmText: string = "Confirm") => {
   return new Promise((resolve) => {
-    window.vex.dialog.buttons.YES.text = i18n.t("Confirm");
+    window.vex.dialog.buttons.YES.text = i18n.t(confirmText);
     window.vex.dialog.buttons.NO.text = i18n.t("Cancel");
     window.vex.dialog.confirm({
       unsafeMessage: i18n.t(message),
@@ -89,6 +89,19 @@ export const vexComfirmAsync = (message) => {
       },
     });
   });
+};
+export const getFormatFromAudioPath = (audioPath: string) => {
+  let format = "mp3";
+  if (audioPath.indexOf(".wav") > -1) {
+    format = "wav";
+  } else if (audioPath.indexOf(".ogg") > -1) {
+    format = "ogg";
+  } else if (audioPath.indexOf(".flac") > -1) {
+    format = "flac";
+  } else if (audioPath.indexOf(".aac") > -1) {
+    format = "aac";
+  }
+  return format;
 };
 export const fetchFileFromPath = (filePath: string) => {
   return new Promise<File>((resolve) => {
@@ -306,43 +319,10 @@ export const loadFontData = async () => {
       };
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    toast.error(errorMessage);
     console.error(error);
   }
 };
-export const splitSentences = (text) => {
-  // 正则表达式匹配中英文句子结束标点（包括后续可能跟的引号或空格）
-  const pattern = /([。！？……——.!?…—][’”"]?\s*)/g;
 
-  // 按标点分割，同时保留标点符号
-  const parts = text.split(pattern);
-
-  // 过滤空字符串并整理结果
-  const sentences: string[] = [];
-  let currentSentence = "";
-
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i].trim();
-    if (!part) continue;
-
-    // 如果是标点部分
-    if (/^[。！？……——.!?…—]/.test(part)) {
-      currentSentence += part;
-      sentences.push(currentSentence.trim());
-      currentSentence = "";
-    } else {
-      currentSentence += part;
-    }
-  }
-
-  // 添加最后未结束的句子
-  if (currentSentence.trim()) {
-    sentences.push(currentSentence.trim());
-  }
-
-  return sentences.filter((s) => s.length > 0);
-};
 export function removeSearchParams() {
   const url = new URL(window.location.href.split("?")[0]);
   window.history.replaceState({}, document.title, url.toString());
@@ -735,7 +715,10 @@ export const testCORS = async (url: string) => {
       toast.error(
         i18n.t(
           "This data source cannot be accessed due to browser's security policy. Please switch to another data source or HTTPS-based service provider."
-        )
+        ),
+        {
+          duration: 8000,
+        }
       );
       return false;
     }
@@ -1033,6 +1016,13 @@ export const handleAutoCloudSync = async () => {
     if (!supportedSources.includes(syncRes.data.default_sync_option)) {
       return false;
     }
+    if (
+      !isElectron &&
+      (syncRes.data.default_sync_option === "webdav" ||
+        syncRes.data.default_sync_option === "s3compatible")
+    ) {
+      return false;
+    }
     ConfigService.setItem(
       "defaultSyncOption",
       syncRes.data.default_sync_option
@@ -1049,4 +1039,15 @@ export const handleAutoCloudSync = async () => {
     return true;
   }
   return false;
+};
+export const splitSentences = (text: string) => {
+  const segmenter = new (Intl as any).Segmenter("zh", {
+    granularity: "sentence",
+  });
+  const segments = segmenter.segment(text);
+
+  const sentences = Array.from(segments).map((s: any) => s.segment);
+  return sentences
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.trim() !== "");
 };

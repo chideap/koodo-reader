@@ -187,7 +187,6 @@ class NavList extends React.Component<NavListProps, NavListState> {
                 marginTop: "10px",
                 marginBottom: "10px",
                 width: "100%",
-                maxHeight: "198px",
               }}
               onClick={async () => {
                 await this.handleJump(item.cfi);
@@ -204,8 +203,8 @@ class NavList extends React.Component<NavListProps, NavListState> {
                 {this.props.currentTab === "bookmarks"
                   ? item.label
                   : this.props.currentTab === "notes"
-                  ? item.text
-                  : item.text}
+                    ? item.text
+                    : item.text}
               </p>
               <div style={{ marginTop: "10px", fontWeight: "bold" }}>
                 {this.props.currentTab === "notes" ? item.notes : null}
