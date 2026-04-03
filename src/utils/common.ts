@@ -2,7 +2,6 @@
 import { isElectron } from "react-device-detect";
 import SparkMD5 from "spark-md5";
 import {
-  BookHelper,
   CommonTool,
   ConfigService,
   SyncUtil,
@@ -29,6 +28,8 @@ import SyncService from "./storage/syncService";
 import localforage from "localforage";
 import { driveList } from "../constants/driveList";
 import { updateUserConfig } from "./request/user";
+import { languageCNMap, languageENMap } from "../constants/ttsList";
+import { BookHelper } from "../assets/lib/kookit.min";
 declare var window: any;
 export const supportedFormats = [
   ".epub",
@@ -98,6 +99,44 @@ export const vexComfirmAsync = (message, confirmText: string = "Confirm") => {
     });
   });
 };
+export const vexOpenAsync = (config: Record<string, any>, message: string) => {
+  return new Promise<Record<string, any> | false>((resolve) => {
+    window.vex.dialog.buttons.YES.text = i18n.t("Confirm");
+    window.vex.dialog.buttons.NO.text = i18n.t("Cancel");
+    const keys = Object.keys(config).filter((k) => k && k.trim());
+    const inputHtml = keys
+      .map((key) => {
+        const raw = config[key] ?? "";
+        const placeholder =
+          typeof raw === "string" && raw.indexOf("[") > -1 ? raw : "";
+        const value =
+          typeof raw === "string" && raw.indexOf("[") === -1 ? raw : "";
+        return [
+          `<div style="margin-bottom:10px">`,
+          `<label style="display:block;margin-bottom:4px;font-weight:500">${key}</label>`,
+          `<input name="${key}" type="text" placeholder="${placeholder}" value="${value}" style="width:100%" required />`,
+          `</div>`,
+        ].join("");
+      })
+      .join("");
+    window.vex.dialog.open({
+      unsafeMessage: message ? i18n.t(message).replace(/\n/g, "<br>") : "",
+      input: inputHtml,
+      callback: function (data) {
+        if (!data) {
+          resolve(false);
+        } else {
+          const result: Record<string, any> = {};
+          for (const key of keys) {
+            result[key] = data[key] ?? "";
+          }
+          resolve(result);
+        }
+      },
+    });
+  });
+};
+
 export const getFormatFromAudioPath = (audioPath: string) => {
   let format = "mp3";
   if (audioPath.indexOf(".wav") > -1) {
@@ -410,12 +449,13 @@ export const preCacheAllBooks = async (bookList: Book[]) => {
         animation:
           ConfigService.getReaderConfig("isSliding") === "yes" ? "sliding" : "",
         convertChinese: ConfigService.getReaderConfig("convertChinese"),
+        textOrientation: ConfigService.getReaderConfig("textOrientation"),
         parserRegex: "",
         isDarkMode: "no",
         isMobile: "no",
         password: getPdfPassword(selectedBook),
         isScannedPDF:
-          selectedBook.description.indexOf("scanned PDF") > -1 ? "yes" : "no",
+          selectedBook.description.indexOf("scanned") > -1 ? "yes" : "no",
       },
       Kookit
     );
@@ -638,7 +678,31 @@ export const checkMissingBook = async () => {
     }
   }
 };
-export const checkBrokenData = async () => {
+export const deleteBrokenCovers = () => {
+  try {
+    if (!isElectron) return;
+    var fs = window.require("fs");
+    var path = window.require("path");
+    const storageLocation = getStorageLocation();
+    if (!storageLocation) return;
+    const dirPath = path.join(storageLocation, "cover");
+    const files = fs.readdirSync(dirPath);
+    for (const file of files) {
+      const filePath = path.join(dirPath, file);
+      try {
+        const stat = fs.statSync(filePath);
+        if (stat.size === 0) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (e) {
+        console.error("Failed to check/delete file:", filePath, e);
+      }
+    }
+  } catch (error) {
+    console.error("Error while deleting broken books and covers:", error);
+  }
+};
+export const checkBrokenDatabase = async () => {
   let localSyncRecords = ConfigService.getAllSyncRecord();
   let localBooks = Object.keys(localSyncRecords).filter(
     (item) =>
@@ -1039,16 +1103,59 @@ export const handleAutoCloudSync = async () => {
   }
   return false;
 };
-export const splitSentences = (text: string) => {
+const isCJKText = (text: string): boolean => {
+  // Check if the majority of characters are CJK (Chinese, Japanese, Korean)
+  const cjkPattern = /[\u3000-\u9fff\uac00-\ud7af\uf900-\ufaff]/g;
+  const cjkCount = (text.match(cjkPattern) || []).length;
+  return cjkCount / text.length > 0.3;
+};
+
+export const splitSentences = (text: string, maxLength?: number) => {
+  const resolvedMaxLength = maxLength ?? (isCJKText(text) ? 50 : 150);
   const segmenter = new (Intl as any).Segmenter("zh", {
     granularity: "sentence",
   });
   const segments = segmenter.segment(text);
 
   const sentences = Array.from(segments).map((s: any) => s.segment);
-  return sentences
+  const trimmed = sentences
     .map((sentence) => sentence.trim())
     .filter((sentence) => sentence.trim() !== "");
+
+  const splitLongSentence = (sentence: string): string[] => {
+    if (sentence.length <= resolvedMaxLength) return [sentence];
+
+    // Try splitting by common punctuation marks (Chinese and Western)
+    const parts = sentence
+      .split(/(?<=[,，;；:：、。！？…\.!\?])/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+    if (parts.length > 1) {
+      // Greedily merge parts to minimize the number of resulting chunks
+      const result: string[] = [];
+      let current = "";
+      for (const part of parts) {
+        const candidate = current ? current + part : part;
+        if (candidate.length <= resolvedMaxLength) {
+          current = candidate;
+        } else {
+          if (current) result.push(current);
+          // If a single part already exceeds maxLength, keep it as-is
+          current = part;
+        }
+      }
+      if (current) result.push(current);
+      return result;
+    }
+
+    // No punctuation found, keep the sentence as-is
+    return [sentence];
+  };
+
+  return trimmed
+    .flatMap(splitLongSentence)
+    .filter((sentence) => /[\p{L}\p{N}]/u.test(sentence));
 };
 export const getICloudDrivePath = () => {
   if (!isElectron) return "";
@@ -1202,5 +1309,27 @@ export const isTokenExpired = async (service: string): Promise<boolean> => {
     return true;
   } else {
     return false;
+  }
+};
+export const langToName = (lang: string) => {
+  let regionCode = lang.split("-")[1];
+  let langCode = lang.split("-")[0];
+  if (!languageENMap["languages"][langCode]) {
+    return lang;
+  }
+  if (ConfigService.getReaderConfig("lang").startsWith("zh")) {
+    return (
+      languageCNMap["languages"][langCode] +
+      (regionCode && languageCNMap["territories"][regionCode]
+        ? " (" + languageCNMap["territories"][regionCode] + ")"
+        : "")
+    );
+  } else {
+    return (
+      languageENMap["languages"][langCode] +
+      (regionCode && languageENMap["territories"][regionCode]
+        ? " (" + languageENMap["territories"][regionCode] + ")"
+        : "")
+    );
   }
 };

@@ -1,6 +1,6 @@
 import BookUtil from "./bookUtil";
 import { isElectron } from "react-device-detect";
-import { getStorageLocation } from "../common";
+import { checkMissingBook, getStorageLocation } from "../common";
 import CoverUtil from "./coverUtil";
 import { CommonTool } from "../../assets/lib/kookit-extra-browser.min";
 import { getCloudConfig } from "./common";
@@ -15,6 +15,7 @@ import i18n from "../../i18n";
 declare var window: any;
 
 export const backup = async (service: string): Promise<Boolean> => {
+  await checkMissingBook();
   let fileName = "data.zip";
   if (service === "local") {
     let year = new Date().getFullYear(),
@@ -38,6 +39,11 @@ export const backup = async (service: string): Promise<Boolean> => {
       const path = window.require("path");
       targetPath = path.join(getStorageLocation(), "backup");
     }
+    toast.loading(i18n.t("Backup..."), {
+      id: "backup",
+    });
+    // 让 UI 有时间渲染 toast
+    await new Promise((resolve) => setTimeout(resolve, 100));
     await backupFromPath(targetPath, fileName);
     if (service === "local") {
       return true;

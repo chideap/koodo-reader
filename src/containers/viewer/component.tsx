@@ -20,15 +20,13 @@ import {
   showDownloadProgress,
 } from "../../utils/common";
 import _ from "underscore";
-import {
-  BookHelper,
-  ConfigService,
-} from "../../assets/lib/kookit-extra-browser.min";
+import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import * as Kookit from "../../assets/lib/kookit.min";
 import PopupRefer from "../../components/popups/popupRefer";
 import { ocrTesseractLangList } from "../../constants/dropdownList";
 import DatabaseService from "../../utils/storage/databaseService";
 import { getOcrResult } from "../../utils/request/reader";
+import { BookHelper } from "../../assets/lib/kookit.min";
 declare var window: any;
 let lock = false; //prevent from clicking too fasts
 
@@ -232,6 +230,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
               ? "sliding"
               : "",
           convertChinese: ConfigService.getReaderConfig("convertChinese"),
+          textOrientation: ConfigService.getReaderConfig("textOrientation"),
           parserRegex: "",
           isDarkMode:
             ConfigService.getReaderConfig("backgroundColor") ===
@@ -241,7 +240,10 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
           backgroundColor: ConfigService.getReaderConfig("backgroundColor"),
           isMobile: "no",
           isIndent: ConfigService.getReaderConfig("isIndent"),
+          isHyphenation: ConfigService.getReaderConfig("isHyphenation"),
           isStartFromEven: ConfigService.getReaderConfig("isStartFromEven"),
+          isAllowScript: ConfigService.getReaderConfig("isAllowScript"),
+          isBionic: ConfigService.getReaderConfig("isBionic"),
           password: getPdfPassword(this.props.currentBook),
           scale: parseFloat(this.props.scale),
           isConvertPDF: ConfigService.getReaderConfig("isConvertPDF"),
@@ -267,7 +269,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
           titleSizeValue:
             ConfigService.getReaderConfig("titleSizeValue") || "1.2",
           isScannedPDF:
-            this.props.currentBook.description.indexOf("scanned PDF") > -1
+            this.props.currentBook.description.indexOf("scanned") > -1
               ? "yes"
               : "no",
         },
@@ -315,7 +317,13 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
     });
     this.setState({ rendition });
 
-    StyleUtil.addDefaultCss();
+    if (
+      this.props.currentBook.format === "PDF" &&
+      ConfigService.getReaderConfig("isConvertPDF") !== "yes"
+    ) {
+    } else {
+      StyleUtil.addDefaultCss();
+    }
     let bookLocation: {
       text: string;
       count: string;
@@ -390,7 +398,13 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
         chapter,
         chapterDocIndex,
       });
-      StyleUtil.addDefaultCss();
+      if (
+        this.props.currentBook.format === "PDF" &&
+        ConfigService.getReaderConfig("isConvertPDF") !== "yes"
+      ) {
+      } else {
+        StyleUtil.addDefaultCss();
+      }
       // rendition.tranformText();
       this.handleBindGesture();
       await this.handleHighlight(rendition);
@@ -498,6 +512,7 @@ class Viewer extends React.Component<ViewerProps, ViewerState> {
           return;
         }
         let selection = doc!.getSelection();
+
         if (!selection || selection.rangeCount === 0) return;
         var rect = selection.getRangeAt(0).getBoundingClientRect();
         this.setState({ rect });

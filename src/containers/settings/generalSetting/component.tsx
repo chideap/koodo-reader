@@ -35,8 +35,6 @@ class GeneralSetting extends React.Component<
       isMergeWord: ConfigService.getReaderConfig("isMergeWord") === "yes",
       isPreventTrigger:
         ConfigService.getReaderConfig("isPreventTrigger") === "yes",
-      isAutoFullscreen:
-        ConfigService.getReaderConfig("isAutoFullscreen") === "yes",
       isPreventAdd: ConfigService.getReaderConfig("isPreventAdd") === "yes",
       isOpenBook: ConfigService.getReaderConfig("isOpenBook") === "yes",
       isDisablePopup: ConfigService.getReaderConfig("isDisablePopup") === "yes",
@@ -52,6 +50,7 @@ class GeneralSetting extends React.Component<
         ConfigService.getReaderConfig("isAutoMaximizeWin") === "yes",
       isAutoLaunch: ConfigService.getReaderConfig("isAutoLaunch") === "yes",
       isOpenInMain: ConfigService.getReaderConfig("isOpenInMain") === "yes",
+      isDisableAI: ConfigService.getReaderConfig("isDisableAI") === "yes",
       isUseOriginalName:
         ConfigService.getReaderConfig("isUseOriginalName") === "yes",
       isExportOriginalName:
@@ -61,13 +60,18 @@ class GeneralSetting extends React.Component<
       isPrecacheBook: ConfigService.getReaderConfig("isPrecacheBook") === "yes",
       appSkin: ConfigService.getReaderConfig("appSkin"),
       isUseBuiltIn: ConfigService.getReaderConfig("isUseBuiltIn") === "yes",
+      isDeleteOriginal:
+        ConfigService.getReaderConfig("isDeleteOriginal") === "yes",
       isDisablePDFCover:
         ConfigService.getReaderConfig("isDisablePDFCover") === "yes",
-      currentThemeIndex: _.findLastIndex(themeList, {
-        name: ConfigService.getReaderConfig("themeColor"),
-      }),
+      currentThemeIndex: themeList.findIndex(
+        (item) =>
+          item.color ===
+          (ConfigService.getReaderConfig("themeColor") || "default")
+      ),
       storageLocation: getStorageLocation() || "",
       isAddNew: false,
+      startupShelf: ConfigService.getReaderConfig("startupShelf") || "",
       settingLogin: "",
       driveConfig: {},
       loginConfig: {},
@@ -188,20 +192,6 @@ class GeneralSetting extends React.Component<
       }
     }
   };
-  handleMergeWord = () => {
-    if (this.state.isOpenInMain && !this.state.isMergeWord) {
-      toast(this.props.t("Please turn off open books in the main window"));
-      return;
-    }
-    if (this.state.isAutoFullscreen && !this.state.isMergeWord) {
-      toast(this.props.t("Please turn off auto open book in full screen"));
-      return;
-    }
-    this.handleSetting("isMergeWord");
-    if (ConfigService.getReaderConfig("isMergeWord") === "yes") {
-      ConfigService.setReaderConfig("isHideBackground", "yes");
-    }
-  };
   handleOpenInMain = () => {
     if (this.state.isMergeWord && !this.state.isOpenInMain) {
       toast(this.props.t("Please turn off merge with word first"));
@@ -246,9 +236,6 @@ class GeneralSetting extends React.Component<
               className="single-control-switch"
               onClick={() => {
                 switch (item.propName) {
-                  case "isMergeWord":
-                    this.handleMergeWord();
-                    break;
                   case "isOpenInMain":
                     this.handleOpenInMain();
                     break;
@@ -477,6 +464,39 @@ class GeneralSetting extends React.Component<
                 {this.props.t(item.label)}
               </option>
             ))}
+          </select>
+        </div>
+        <div className="setting-dialog-new-title">
+          <Trans>Auto switch to shelf on startup</Trans>
+          <select
+            name=""
+            className="lang-setting-dropdown"
+            onChange={(event) => {
+              const value = event.target.value;
+              ConfigService.setReaderConfig("startupShelf", value);
+              this.setState({ startupShelf: value });
+              toast.success(this.props.t("Change successful"));
+            }}
+          >
+            <option
+              value=""
+              className="lang-setting-option"
+              selected={!this.state.startupShelf}
+            >
+              {this.props.t("Disabled")}
+            </option>
+            {Object.keys(ConfigService.getAllMapConfig("shelfList") || {}).map(
+              (shelfName) => (
+                <option
+                  value={shelfName}
+                  key={shelfName}
+                  className="lang-setting-option"
+                  selected={shelfName === this.state.startupShelf}
+                >
+                  {shelfName}
+                </option>
+              )
+            )}
           </select>
         </div>
         <div className="setting-dialog-new-title">

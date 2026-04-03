@@ -39,28 +39,23 @@ class BookCoverItem extends React.Component<BookCoverProps, BookCoverState> {
     this.setState({
       isBookOffline: await BookUtil.isBookOffline(this.props.book.key),
     });
-    let filePath = "";
-    // Get file path from electron
-    if (isElectron) {
-      const { ipcRenderer } = window.require("electron");
-      filePath = ipcRenderer.sendSync("check-file-data");
-    }
-
-    if (
-      ConfigService.getReaderConfig("isOpenBook") === "yes" &&
-      ConfigService.getAllListConfig("recentBooks")[0] ===
-        this.props.book.key &&
-      !this.props.currentBook.key &&
-      !filePath
-    ) {
-      this.props.handleReadingBook(this.props.book);
-      BookUtil.redirectBook(this.props.book);
-    }
   }
   async UNSAFE_componentWillReceiveProps(nextProps: BookCoverProps) {
-    if (nextProps.book.key !== this.props.book.key) {
+    if (
+      nextProps.book.key !== this.props.book.key ||
+      (nextProps.refreshBookKey === this.props.book.key &&
+        nextProps.refreshBookKey !== this.props.refreshBookKey)
+    ) {
       let cover = await CoverUtil.getCover(nextProps.book);
       let isCoverExist = await CoverUtil.isCoverExist(nextProps.book);
+      if (
+        cover &&
+        !cover.startsWith("data:") &&
+        !cover.startsWith("blob:") &&
+        !cover.startsWith("http")
+      ) {
+        cover = cover + "?t=" + Date.now();
+      }
       this.setState({
         isFavorite:
           ConfigService.getAllListConfig("favoriteBooks").indexOf(
@@ -72,6 +67,7 @@ class BookCoverItem extends React.Component<BookCoverProps, BookCoverState> {
       this.setState({
         isBookOffline: await BookUtil.isBookOffline(nextProps.book.key),
       });
+      this.props.handleRefreshBookCover("");
     }
   }
   handleMoreAction = (event: any) => {

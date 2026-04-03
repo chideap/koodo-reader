@@ -13,53 +13,64 @@ class DropdownList extends React.Component<
   constructor(props: DropdownListProps) {
     super(props);
     this.state = {
-      currentFontFamilyIndex: dropdownList[0].option.findIndex((item: any) => {
-        return (
-          item.value ===
-          (ConfigService.getReaderConfig("fontFamily") || "Built-in font")
-        );
-      }),
-      currentLineHeightIndex: dropdownList[1].option.findIndex((item: any) => {
-        return (
-          item.value === (ConfigService.getReaderConfig("lineHeight") || "")
-        );
-      }),
-      currentTextAlignIndex: dropdownList[2].option.findIndex((item: any) => {
-        return (
-          item.value === (ConfigService.getReaderConfig("textAlign") || "")
-        );
-      }),
-      chineseConversionIndex: dropdownList[3].option.findIndex((item: any) => {
-        return (
-          item.value === (ConfigService.getReaderConfig("convertChinese") || "")
-        );
-      }),
+      currentFontFamilyValue:
+        ConfigService.getReaderConfig("fontFamily") || "Built-in font",
+      currentSubFontFamilyValue:
+        ConfigService.getReaderConfig("subFontFamily") || "Built-in font",
+      currentLineHeightValue: ConfigService.getReaderConfig("lineHeight") || "",
+      currentTextAlignValue: ConfigService.getReaderConfig("textAlign") || "",
+      chineseConversionValue:
+        ConfigService.getReaderConfig("convertChinese") || "",
+      currentTextOrientationValue:
+        ConfigService.getReaderConfig("textOrientation") || "",
     };
   }
   componentDidMount() {
     loadFontData().then((result) => {
       if (!result || result.length === 0) return;
-      dropdownList[0].option = dropdownList[0].option.concat(result);
-      this.setState({
-        currentFontFamilyIndex: dropdownList[0].option.findIndex(
-          (item: any) => {
-            return (
-              item.value ===
-              (ConfigService.getReaderConfig("fontFamily") || "Built-in font")
-            );
-          }
-        ),
-      });
+      let fontFamilyItem = dropdownList.find(
+        (item) => item.value === "fontFamily"
+      );
+      let subFontFamilyItem = dropdownList.find(
+        (item) => item.value === "subFontFamily"
+      );
+      if (fontFamilyItem && fontFamilyItem.option.length <= 2) {
+        fontFamilyItem.option = fontFamilyItem.option.concat(result);
+      }
+      if (subFontFamilyItem && subFontFamilyItem.option.length <= 2) {
+        subFontFamilyItem.option = subFontFamilyItem.option.concat(result);
+      }
+      if (fontFamilyItem && subFontFamilyItem) {
+        this.setState({
+          currentFontFamilyValue:
+            ConfigService.getReaderConfig("fontFamily") || "Built-in font",
+          currentSubFontFamilyValue:
+            ConfigService.getReaderConfig("subFontFamily") || "Built-in font",
+        });
+      }
     });
   }
 
   handleView(event: any, option: string) {
-    let arr = event.target.value.split("#");
-    ConfigService.setReaderConfig(option, arr[0]);
+    const value = event.target.value;
+    ConfigService.setReaderConfig(option, value);
+    let arr = [value];
     switch (option) {
       case "fontFamily":
         this.setState({
-          currentFontFamilyIndex: arr[1],
+          currentFontFamilyValue: arr[0],
+        });
+        if (arr[0] === "Built-in font") {
+          ConfigService.setReaderConfig(option, "");
+        }
+        if (arr[0] === "Load local fonts") {
+          loadFontData();
+        }
+
+        break;
+      case "subFontFamily":
+        this.setState({
+          currentSubFontFamilyValue: arr[0],
         });
         if (arr[0] === "Built-in font") {
           ConfigService.setReaderConfig(option, "");
@@ -72,20 +83,31 @@ class DropdownList extends React.Component<
 
       case "lineHeight":
         this.setState({
-          currentLineHeightIndex: arr[1],
+          currentLineHeightValue: arr[0],
         });
 
         break;
       case "textAlign":
         this.setState({
-          currentTextAlignIndex: arr[1],
+          currentTextAlignValue: arr[0],
         });
 
         break;
       case "convertChinese":
         this.setState({
-          chineseConversionIndex: arr[1],
+          chineseConversionValue: arr[0],
         });
+
+        break;
+      case "textOrientation":
+        this.setState({
+          currentTextOrientationValue: arr[0],
+        });
+        this.props.handleTextOrientation(arr[0]);
+        if (arr[0] === "vertical") {
+          this.props.handleHideBackground(true);
+          ConfigService.setReaderConfig("isHideBackground", "yes");
+        }
 
         break;
       default:
@@ -96,7 +118,7 @@ class DropdownList extends React.Component<
   render() {
     const renderParagraphCharacter = () => {
       return dropdownList.map((item) => (
-        <li className="paragraph-character-container" key={item.id}>
+        <li className="paragraph-character-container" key={item.value}>
           <p className="general-setting-title">
             <Trans>{item.title}</Trans>
           </p>
@@ -116,18 +138,22 @@ class DropdownList extends React.Component<
                 index: number
               ) => (
                 <option
-                  value={subItem.value + "#" + index.toString()}
+                  value={subItem.value}
                   key={index}
                   className="general-setting-option"
                   selected={
-                    index ===
+                    subItem.value ===
                     (item.value === "lineHeight"
-                      ? this.state.currentLineHeightIndex
+                      ? this.state.currentLineHeightValue
                       : item.value === "textAlign"
-                        ? this.state.currentTextAlignIndex
+                        ? this.state.currentTextAlignValue
                         : item.value === "convertChinese"
-                          ? this.state.chineseConversionIndex
-                          : this.state.currentFontFamilyIndex)
+                          ? this.state.chineseConversionValue
+                          : item.value === "textOrientation"
+                            ? this.state.currentTextOrientationValue
+                            : item.value === "fontFamily"
+                              ? this.state.currentFontFamilyValue
+                              : this.state.currentSubFontFamilyValue)
                   }
                 >
                   {this.props.t(subItem.label)}

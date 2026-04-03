@@ -5,20 +5,47 @@ import { ConfigService } from "../../assets/lib/kookit-extra-browser.min";
 import { Trans } from "react-i18next";
 class Background extends React.Component<BackgroundProps, BackgroundState> {
   isFirst: Boolean;
+  timeInterval: any;
   constructor(props: any) {
     super(props);
     this.state = {
       isSingle: this.props.readerMode !== "double",
       prevPage: 0,
       nextPage: 0,
+      currentTime: this.getFormattedTime(),
+      percentage: "",
     };
     this.isFirst = true;
+  }
+
+  getFormattedTime() {
+    const now = new Date();
+    return (
+      now.getHours().toString().padStart(2, "0") +
+      ":" +
+      now.getMinutes().toString().padStart(2, "0")
+    );
+  }
+
+  async componentDidMount() {
+    this.timeInterval = setInterval(() => {
+      this.setState({ currentTime: this.getFormattedTime() });
+    }, 10000);
+  }
+
+  componentWillUnmount() {
+    if (this.timeInterval) {
+      clearInterval(this.timeInterval);
+    }
   }
 
   async UNSAFE_componentWillReceiveProps(nextProps: BackgroundProps) {
     if (nextProps.htmlBook !== this.props.htmlBook && nextProps.htmlBook) {
       await this.handlePageNum(nextProps.htmlBook.rendition);
       nextProps.htmlBook.rendition.on("page-changed", async () => {
+        await this.handlePageNum(nextProps.htmlBook.rendition);
+      });
+      nextProps.htmlBook.rendition.on("rendered", async () => {
         await this.handlePageNum(nextProps.htmlBook.rendition);
       });
     }
@@ -36,6 +63,7 @@ class Background extends React.Component<BackgroundProps, BackgroundState> {
       this.setState({
         prevPage: pageInfo.currentPage,
         nextPage: pageInfo.currentPage + 1,
+        percentage: pageInfo.percentage,
       });
       return;
     }
@@ -46,6 +74,7 @@ class Background extends React.Component<BackgroundProps, BackgroundState> {
       nextPage: this.state.isSingle
         ? pageInfo.currentPage
         : pageInfo.currentPage * 2,
+      percentage: pageInfo.percentage,
     });
   }
 
@@ -106,6 +135,16 @@ class Background extends React.Component<BackgroundProps, BackgroundState> {
                 {this.props.currentBook.name}
               </p>
             )}
+          {!this.props.isHideHeader && (
+            <>
+              <span className="footer-time">
+                {this.state.currentTime}
+                {this.state.percentage
+                  ? "  " + parseFloat(this.state.percentage).toFixed(2) + "%"
+                  : ""}
+              </span>
+            </>
+          )}
         </div>
         <div className="footer-container">
           {!this.props.isHideFooter && this.state.prevPage > 0 && (
@@ -144,6 +183,30 @@ class Background extends React.Component<BackgroundProps, BackgroundState> {
         <>
           {this.props.isShowBookmark ? <div className="bookmark"></div> : null}
         </>
+        {this.props.isShowPageBorder && (
+          <>
+            <div className="page-border"></div>
+            <div className="inner-page-border"></div>
+            <div className="page-border-header-line"></div>
+            <div className="page-border-footer-line"></div>
+            {!this.state.isSingle && (
+              <div
+                className="page-border-center-line"
+                style={
+                  this.props.textOrientation === "vertical"
+                    ? {
+                        top: "50%",
+                        height: "1px",
+                        width: "calc(100% - 30px)",
+                        left: "15px",
+                        right: "15px",
+                      }
+                    : {}
+                }
+              ></div>
+            )}
+          </>
+        )}
       </div>
     );
   }

@@ -41,14 +41,16 @@ export interface SettingInfoState {
   isOpenInMain: boolean;
   isDisableUpdate: boolean;
   isExportOriginalName: boolean;
+  isDisableAI: boolean;
   isUseOriginalName: boolean;
   isPrecacheBook: boolean;
   isUseBuiltIn: boolean;
+  isDeleteOriginal: boolean;
   isDisablePDFCover: boolean;
-  isAutoFullscreen: boolean;
   isHideShelfBook: boolean;
   isPreventAdd: boolean;
   isAddNew: boolean;
+  startupShelf: string;
   currentThemeIndex: number;
   driveConfig: any;
   loginConfig: any;

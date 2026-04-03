@@ -67,6 +67,25 @@ export const getAnswerStream = async (
   );
   return result;
 };
+export const getDictionaryStream = async (
+  word: string,
+  from: string,
+  to: string,
+  isFullAnalysis: boolean,
+  onMessage: (result) => void
+) => {
+  let readerRequest = await getReaderRequest();
+  let result = await readerRequest.getDictionaryFetch(
+    {
+      word,
+      from,
+      to,
+      is_full_analysis: isFullAnalysis,
+    },
+    onMessage
+  );
+  return result;
+};
 export const getDictionary = async (word: string, from: string, to: string) => {
   let readerRequest = await getReaderRequest();
   let response = await readerRequest.getDictionary({ word, from, to });
@@ -77,11 +96,6 @@ export const getDictionary = async (word: string, from: string, to: string) => {
     return;
   } else {
     toast.error(i18n.t("Fetch failed, error code") + ": " + response.msg);
-    if (response.code === 20004) {
-      toast(
-        i18n.t("Please login again to update your membership on this device")
-      );
-    }
   }
   return response;
 };
@@ -142,25 +156,6 @@ export const getDictText = async (word: string, from: string, to: string) => {
       `<p class="dict-learn-more">${i18n.t("Generated with AI")}</p>`;
     return dictText;
   } else {
-    toast.error(
-      i18n.t("No result found") +
-        " " +
-        i18n.t(
-          officialDictList.find((item) => item.code === from)?.nativeLang ||
-            from
-        ) +
-        " -> " +
-        i18n.t(
-          officialDictList.find((item) => item.code === to)?.nativeLang || to
-        )
-    );
-    if (from === "auto") {
-      toast(
-        i18n.t(
-          "Language auto-detection may not be accurate. Please try selecting the source language manually"
-        )
-      );
-    }
     return "";
   }
 };
@@ -211,7 +206,13 @@ export const getTTSAudio = async (
       let result = await vexComfirmAsync(
         i18n.t(
           "You have exhausted your daily free AI voice character quota. Please purchase more quota to continue using this feature or wait until the quota resets. You can also use other TTS voices instead."
-        ),
+        ) +
+          " " +
+          (response.data && response.data.ttl
+            ? i18n.t("Your quota will be reset in", {
+                ttl: (response.data.ttl / 3600).toFixed(1),
+              })
+            : ""),
         "Purchase more quota"
       );
       if (result) {

@@ -3,6 +3,7 @@ import { isElectron } from "react-device-detect";
 import { getIframeDoc, getIframeWin } from "./docUtil";
 import { handleExitFullScreen, handleFullScreen, sleep } from "../common";
 import Hammer from "hammerjs";
+import TTSUtil from "./ttsUtil";
 declare var window: any;
 
 let throttleTime =
@@ -24,6 +25,48 @@ export const getSelection = (format: string) => {
   }
 
   return text;
+};
+export const searchInTheBook = (
+  keyword: string,
+  format: string,
+  isSearch: boolean
+) => {
+  let leftPanel = document.querySelector(".left-panel");
+  const clickEvent = new MouseEvent("click", {
+    view: window,
+    bubbles: true,
+    cancelable: true,
+  });
+  if (!leftPanel) return;
+  leftPanel.dispatchEvent(clickEvent);
+  const focusEvent = new MouseEvent("focus", {
+    view: window,
+    bubbles: true,
+    cancelable: true,
+  });
+  let searchBox: any = document.querySelector(".header-search-box");
+  searchBox.dispatchEvent(focusEvent);
+  let searchIcon = document.querySelector(".header-search-icon");
+  searchIcon?.dispatchEvent(clickEvent);
+  if (isSearch) {
+    searchBox.value = getSelection(format) || keyword;
+  }
+  const keyEvent: any = new KeyboardEvent("keydown", {
+    bubbles: true,
+    cancelable: true,
+    keyCode: 13,
+  } as any);
+  searchBox.dispatchEvent(keyEvent);
+};
+export const openTableOfContents = () => {
+  let leftPanel = document.querySelector(".left-panel");
+  const clickEvent = new MouseEvent("click", {
+    view: window,
+    bubbles: true,
+    cancelable: true,
+  });
+  if (!leftPanel) return;
+  leftPanel.dispatchEvent(clickEvent);
 };
 let lock = false; //prevent from clicking too fasts
 const arrowKeys = async (
@@ -71,7 +114,24 @@ const handleShortcut = (event: any) => {
     }
   }
   if (event.keyCode === 27) {
-    ConfigService.setReaderConfig("isFullscreen", "no");
+    if (ConfigService.getReaderConfig("isFullscreen") === "yes") {
+      ConfigService.setReaderConfig("isFullscreen", "no");
+      handleExitFullScreen();
+    } else {
+      ConfigService.setReaderConfig("isFullscreen", "no");
+      window.speechSynthesis && window.speechSynthesis.cancel();
+      TTSUtil.pauseAudio();
+      if (isElectron) {
+        if (ConfigService.getReaderConfig("isOpenInMain") === "yes") {
+          window.require("electron").ipcRenderer.invoke("exit-tab", "ping");
+        } else {
+          window.close();
+        }
+      } else {
+        ConfigService.setReaderConfig("isFinishWebReading", "yes");
+        window.close();
+      }
+    }
   }
   if (event.keyCode === 122) {
     if (isElectron) {
@@ -96,6 +156,14 @@ const handleShortcut = (event: any) => {
       );
       window.require("electron").ipcRenderer.invoke("switch-moyu", "ping");
     }
+  }
+  if (event.keyCode === 70 && event.ctrlKey) {
+    event.preventDefault();
+    searchInTheBook("", "", false);
+  }
+  if (event.keyCode === 66 && event.ctrlKey) {
+    event.preventDefault();
+    openTableOfContents();
   }
 };
 

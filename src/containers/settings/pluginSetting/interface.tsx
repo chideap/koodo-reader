@@ -26,12 +26,10 @@ export interface SettingInfoState {
   isPreventTrigger: boolean;
   appSkin: string;
   storageLocation: string;
-  isOpenBook: boolean;
   isDisablePopup: boolean;
   isDeleteShelfBook: boolean;
   isOpenInMain: boolean;
   isPrecacheBook: boolean;
-  isUseBuiltIn: boolean;
   isDisablePDFCover: boolean;
   isHideShelfBook: boolean;
   isPreventAdd: boolean;
@@ -40,4 +38,7 @@ export interface SettingInfoState {
   driveConfig: any;
   loginConfig: any;
   settingLogin: string;
+  availablePlugins: any[];
+  expandedPluginKey: string | null;
+  activePluginTab: string;
 }

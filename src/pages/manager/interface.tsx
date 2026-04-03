@@ -21,6 +21,7 @@ export interface ManagerProps extends RouteComponentProps<any> {
   isOpenSortShelfDialog: boolean;
   isOpenLocalFileDialog: boolean;
   dragItem: string;
+  importBookFunc: (file: any) => Promise<void>;
   handleFetchBooks: () => void;
   handleFetchPlugins: () => void;
   handleFetchNotes: () => void;
@@ -40,6 +41,8 @@ export interface ManagerProps extends RouteComponentProps<any> {
   handleImportDialog: (isOpenImportDialog: boolean) => void;
   handleReadingState: (isReading: boolean) => void;
   handleSetting: (isSettingOpen: boolean) => void;
+  handleShelf: (shelfTitle: string) => void;
+  handleMode: (mode: string) => void;
   handleShowPopupNote: (isShowPopupNote: boolean) => void;
   handleSortShelfDialog: (isOpenSortShelfDialog: boolean) => void;
   t: (title: string) => string;

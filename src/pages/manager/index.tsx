@@ -21,6 +21,8 @@ import {
   handleReadingState,
   handleShowPopupNote,
   handleSortShelfDialog,
+  handleShelf,
+  handleMode,
 } from "../../store/actions";
 import { withTranslation } from "react-i18next";
 
@@ -33,6 +35,7 @@ const mapStateToProps = (state: stateType) => {
     books: state.manager.books,
     mode: state.sidebar.mode,
     dragItem: state.book.dragItem,
+    importBookFunc: state.book.importBookFunc,
     shelfTitle: state.sidebar.shelfTitle,
     isOpenEditDialog: state.book.isOpenEditDialog,
     isDetailDialog: state.manager.isDetailDialog,
@@ -74,6 +77,8 @@ const actionCreator = {
   handleImportDialog,
   handleReadingState,
   handleShowPopupNote,
+  handleShelf,
+  handleMode,
 };
 export default connect(
   mapStateToProps,
