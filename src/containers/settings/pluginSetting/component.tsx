@@ -201,7 +201,7 @@ class SettingDialog extends React.Component<
 
         {this.props.plugins &&
           this.props.plugins
-            .filter((item) => item.type !== "ai" && item.type !== "dictionary")
+            .filter((item) => item.type !== "ai")
             .map((item) => {
               return (
                 <div className="setting-dialog-new-title" key={item.key}>
@@ -223,6 +223,7 @@ class SettingDialog extends React.Component<
                   </span>
 
                   {!item.key.startsWith("official") &&
+                    !item.key.startsWith("dict") &&
                     !item.key.startsWith("custom") && (
                       <span
                         className="change-location-button"
